@@ -26,7 +26,7 @@ try {
     if ([string]::IsNullOrWhiteSpace($Root)) {
         $ScriptPath = $MyInvocation.MyCommand.Path
         $ScriptDir = Split-Path -Parent $ScriptPath
-        $RepoRoot = Resolve-Path -Path (Join-Path $ScriptDir '..') -ErrorAction Stop
+        $RepoRoot = Resolve-Path -Path (Join-Path $ScriptDir '..\..') -ErrorAction Stop
         $RepoRoot = $RepoRoot.Path
     } else {
         $RepoRoot = Resolve-Path -Path $Root -ErrorAction Stop

@@ -1,4 +1,4 @@
-<#
+﻿<#
     Deep-clean all Unreal Engine build artifacts and regenerate Visual Studio project files.
     Use this when you have corrupt caches, stale VS solutions, or want a clean slate before a build.
 
@@ -16,7 +16,7 @@ param(
 )
 
 if (-not $ProjectRoot) {
-    $ProjectRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+    $ProjectRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
 }
 
 # Auto-detect .uproject
@@ -89,3 +89,4 @@ if ($DryRun) {
         -Wait -NoNewWindow
     Write-Host "Done!" -ForegroundColor Green
 }
+

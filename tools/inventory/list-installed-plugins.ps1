@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$ProjectRoot = '',
     [string]$OutputPath  = ''
 )
@@ -6,7 +6,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 if (-not $ProjectRoot) {
-    $ProjectRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+    $ProjectRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
 }
 
 if (-not $OutputPath) {
@@ -126,3 +126,4 @@ Set-Content -LiteralPath $OutputPath -Value $json -Encoding UTF8
 
 Write-Host "Game features: $($gameFeatures.Count) | Project plugins: $($projectPlugins.Count) | Engine plugins: $(@($enginePlugins).Count) | Content packs: $(@($contentPacks).Count)"
 Write-Host "Written to: $OutputPath"
+

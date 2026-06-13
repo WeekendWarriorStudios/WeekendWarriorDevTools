@@ -1,10 +1,10 @@
-param(
+﻿param(
     [string]$ProjectRoot = '',
     [string]$OutputPath  = ''
 )
 
 if (-not $ProjectRoot) {
-    $ProjectRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+    $ProjectRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
 }
 
 $ErrorActionPreference = 'Stop'
@@ -50,3 +50,4 @@ $json = $result | ConvertTo-Json -Depth 8
 Set-Content -LiteralPath $OutputPath -Value $json -Encoding UTF8
 
 Write-Host "Found $($maps.Count) maps, total size $($result.totalSizeMB) MB. Wrote: $OutputPath"
+

@@ -1,10 +1,10 @@
-param(
+﻿param(
     [string]$ProjectRoot = '',
     [string]$OutputPath  = ''
 )
 
 if (-not $ProjectRoot) {
-    $ProjectRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+    $ProjectRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
 }
 
 $ErrorActionPreference = 'Stop'
@@ -82,3 +82,4 @@ $json = $result | ConvertTo-Json -Depth 10
 Set-Content -LiteralPath $OutputPath -Value $json -Encoding UTF8
 
 Write-Host "Wrote $total assets to $OutputPath ($($needsCleanup.Count) need cleanup)"
+

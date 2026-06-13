@@ -1,4 +1,4 @@
-<#
+﻿<#
     Run all inventory tools and write a combined project-health JSON report.
     Each tool's output JSON is merged under its own key in the final report.
 
@@ -12,7 +12,7 @@ param(
 )
 
 if (-not $ProjectRoot) {
-    $ProjectRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+    $ProjectRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
 }
 
 if (-not $OutputPath) {
@@ -64,3 +64,4 @@ foreach ($key in $tools.Keys) {
 
 $report | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $OutputPath -Encoding UTF8
 Write-Host "Project health report written to: $OutputPath"
+

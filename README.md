@@ -6,114 +6,120 @@ All PowerShell tools are project-agnostic — they accept a `-ProjectRoot` param
 
 ---
 
-## PowerShell Tools (`tools/`)
+## Directory Structure
 
-### Build & Maintenance
+```
+tools/
+├── build/              # Build & cleanup automation
+├── inventory/          # Asset & plugin inventory & reporting
+├── analysis/           # Asset analysis & metrics
+├── quality/            # Code quality scanning
+├── convert/            # Document format conversion
+├── python/
+│   ├── assets/         # Asset-related editor automation
+│   └── level/          # Level/world-related automation
+└── outputs/            # Generated JSON reports (gitignored)
+```
+
+---
+
+## PowerShell Tools
+
+### build/ — Build & Maintenance
 
 | Script | Description |
 |--------|-------------|
-| `clean-untracked.ps1` | Remove `Binaries/`, `Intermediate/`, `DerivedDataCache/` from the project and plugins, with git-awareness to skip tracked files |
-| `clean-and-regen.ps1` | Deep-clean all build artifacts (including `.vs/` and `Saved/`) **and** regenerate Visual Studio project files via UnrealBuildTool |
+| `clean-untracked.ps1` | Remove `Binaries/`, `Intermediate/`, `DerivedDataCache/` from project and plugins, with git-awareness for tracked files |
+| `clean-and-regen.ps1` | Deep-clean all build artifacts **and** regenerate Visual Studio project files via UnrealBuildTool |
 | `headless-cook.ps1` | Run a headless build-cook-package cycle via UAT (`RunUAT.bat`) without opening the editor |
 | `setup-daily-cleanup.ps1` | Register a Windows Scheduled Task to run `clean-untracked.ps1` daily (requires Admin) |
 
-### Project Inventory
+**Usage:**
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\build\clean-untracked.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\build\clean-and-regen.ps1 -DryRun
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\build\headless-cook.ps1 -Config Shipping
+```
+
+### inventory/ — Asset & Plugin Inventory
 
 | Script | Description |
 |--------|-------------|
-| `list-installed-plugins.ps1` | List all plugins (game features, project, engine) from the `.uproject` file and local `.uplugin` files |
-| `generate-ue5-plugin-catalog.ps1` | Scan the UE5 engine directory and output a full JSON catalog of available engine plugins |
-| `level-world-inventory.ps1` | Find all `.umap` files in `Content/` and report path, category, and file size |
-| `list-animation-assets.ps1` | Inventory animation assets and Pose Search data across Game Feature plugins (auto-detects plugins) |
+| `list-installed-plugins.ps1` | List all plugins (game features, project, engine) from `.uproject` and local `.uplugin` files |
+| `generate-ue5-plugin-catalog.ps1` | Scan UE5 engine directory and output full JSON catalog of available engine plugins |
+| `level-world-inventory.ps1` | Find all `.umap` files in `Content/` with path, category, and size |
+| `list-animation-assets.ps1` | Inventory animation assets and Pose Search data across Game Feature plugins (auto-detects) |
+| `project-health-report.ps1` | **Orchestrator** — runs all inventory tools and writes combined JSON health report |
 
-### Asset Analysis
+**Usage:**
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\inventory\project-health-report.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\inventory\list-installed-plugins.ps1 -OutputPath C:\reports\plugins.json
+```
+
+### analysis/ — Asset Analysis & Metrics
 
 | Script | Description |
 |--------|-------------|
-| `asset-prefix-breakdown.ps1` | Categorize `.uasset` files by naming prefix (`SM_`, `T_`, `BP_`, etc.) and flag assets needing cleanup |
+| `asset-prefix-breakdown.ps1` | Categorize `.uasset` files by naming prefix (`SM_`, `T_`, `BP_`, etc.) and flag cleanup violations |
 | `count-assets-by-type.ps1` | Count all Content assets grouped by file extension and top-level folder |
-| `find-large-assets.ps1` | Find assets above a size threshold (default 10 MB), ranked by size |
+| `find-large-assets.ps1` | Find assets above size threshold (default 10 MB), ranked by size |
 
-### Code Quality
+**Usage:**
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\analysis\find-large-assets.ps1 -ThresholdMB 50 -Top 25
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\analysis\count-assets-by-type.ps1
+```
+
+### quality/ — Code Quality
 
 | Script | Description |
 |--------|-------------|
 | `source-code-tech-debt-scanner.ps1` | Scan `.cpp`/`.h` files for `TODO`, `FIXME`, `HACK`, and `OPTIMIZE` comments |
 
-### Document Conversion
+**Usage:**
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\quality\source-code-tech-debt-scanner.ps1
+```
+
+### convert/ — Document Conversion
 
 | Script | Description |
 |--------|-------------|
 | `convert_docx_to_pdf.ps1` | Convert `.docx` files to PDF using Microsoft Word (COM automation) |
 | `convert_html_to_pdf.ps1` | Convert `.html` files to PDF using Microsoft Edge headless mode |
 
-### Reporting
+---
+
+## Python Editor Scripts
+
+These scripts run **inside the Unreal Editor** via `Edit > Execute Python Script` or the Python console. Requires the **Python Editor Script Plugin** enabled in your project.
+
+### python/assets/ — Asset-Related Automation
 
 | Script | Description |
 |--------|-------------|
-| `project-health-report.ps1` | Orchestrator — runs all inventory tools and writes a combined JSON health report |
+| `lint_asset_names.py` | Scan Content path and auto-rename assets violating UE5 naming conventions (`T_`, `SM_`, `BP_`, etc.) — supports dry-run |
+| `generate_orm_texture.py` | Create channel-packed ORM texture asset (R=AO, G=Roughness, B=Metallic) from three source textures |
 
----
-
-## Python Editor Scripts (`tools/python/`)
-
-These scripts run **inside the Unreal Editor** via `Edit > Execute Python Script` or the Python console. They require the `Python Editor Script Plugin` to be enabled in your project.
-
-| Script | Description |
-|--------|-------------|
-| `lint_asset_names.py` | Scan a Content path and auto-rename assets that violate UE5 naming conventions (`T_`, `SM_`, `BP_`, etc.) — supports dry-run mode |
-| `generate_orm_texture.py` | Create a channel-packed ORM texture asset (R=AO, G=Roughness, B=Metallic) from three source textures |
-| `spawn_procedural_grid.py` | Spawn actors in a configurable rows×cols grid in the current level, with dry-run and clear utilities |
-
----
-
-## Usage
-
-### PowerShell
-
-Run any script from the repo root (or from the `tools/` folder of your UE5 project):
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File tools\<script-name>.ps1
-```
-
-**Common parameters** (most scripts support these):
-
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `-ProjectRoot` | Two levels above `tools/` | Path to your UE5 project root |
-| `-OutputPath` | `tools/outputs/<name>.json` | Where to write JSON output |
-| `-DryRun` | `$false` | Preview changes without modifying anything |
-
-**Examples:**
-
-```powershell
-# Deep clean + regen VS project files
-powershell -NoProfile -ExecutionPolicy Bypass -File tools\clean-and-regen.ps1
-
-# Headless cook for Shipping
-powershell -NoProfile -ExecutionPolicy Bypass -File tools\headless-cook.ps1 -Config Shipping -StagingDir D:\Builds\MyGame
-
-# Find assets over 50 MB
-powershell -NoProfile -ExecutionPolicy Bypass -File tools\find-large-assets.ps1 -ThresholdMB 50
-
-# Full project health report
-powershell -NoProfile -ExecutionPolicy Bypass -File tools\project-health-report.ps1
-```
-
-### Python (Unreal Editor)
-
-Open the editor Python console (`Window > Developer Tools > Python`):
-
+**Usage (editor Python console):**
 ```python
-# Dry-run naming lint on a folder
+import sys
+sys.path.insert(0, r"A:\Projects\MyGame\tools\python\assets")
 import lint_asset_names
 lint_asset_names.lint_and_fix_asset_names("/Game/MyProject", dry_run=True)
+```
 
-# Apply fixes
-lint_asset_names.lint_and_fix_asset_names("/Game/MyProject", dry_run=False)
+### python/level/ — Level/World Automation
 
-# Preview procedural grid spawn
+| Script | Description |
+|--------|-------------|
+| `spawn_procedural_grid.py` | Spawn actors in configurable rows×cols grid in current level, with dry-run and clear utilities |
+
+**Usage (editor Python console):**
+```python
+import sys
+sys.path.insert(0, r"A:\Projects\MyGame\tools\python\level")
 import spawn_procedural_grid
 spawn_procedural_grid.spawn_grid(
     actor_path="/Game/Core/Environment/BP_GridNode.BP_GridNode_C",
@@ -121,28 +127,52 @@ spawn_procedural_grid.spawn_grid(
 )
 ```
 
-To run a Python script on editor startup, register it in **Project Settings > Plugins > Python > Startup Scripts**.
+---
+
+## Common Parameters
+
+Most PowerShell scripts support:
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `-ProjectRoot` | Auto-detected (2 levels above script) | Path to UE5 project root |
+| `-OutputPath` | `tools/outputs/<name>.json` | Where to write JSON output |
+| `-DryRun` | `$false` | Preview changes without modifying |
 
 ---
 
 ## Setup
 
-1. **Clone** this repo or copy the `tools/` folder into the root of your UE5 project.
-2. Add `tools/outputs/` to your project's `.gitignore` — outputs are local and not meant to be committed.
-3. For daily cleanup automation, run `setup-daily-cleanup.ps1` as Administrator.
-4. For Python editor scripts, enable the **Python Editor Script Plugin** in your project plugins list.
+1. **Copy or clone** this repo into the root of your UE5 project, or run scripts with explicit `-ProjectRoot`.
+2. **Add to .gitignore:**
+   ```
+   tools/outputs/
+   ```
+3. **Enable Python (optional):** In **Project Settings > Plugins**, search and enable **Python Editor Script Plugin**.
+4. **Schedule cleanup (optional):** Run as Administrator:
+   ```powershell
+   powershell -NoProfile -ExecutionPolicy Bypass -File tools\build\setup-daily-cleanup.ps1
+   ```
 
 ---
 
 ## Requirements
 
-| Requirement | Used by |
-|-------------|---------|
+| Tool | Required For |
+|------|--------------|
 | Windows PowerShell 5.1+ | All `.ps1` scripts |
 | Unreal Engine 5 project | All scripts |
-| Git | `clean-untracked.ps1` (tracked-file detection) |
-| UnrealBuildTool | `clean-and-regen.ps1` |
-| RunUAT.bat | `headless-cook.ps1` |
-| Microsoft Word | `convert_docx_to_pdf.ps1` |
-| Microsoft Edge | `convert_html_to_pdf.ps1` |
-| UE5 Python Editor Script Plugin | All `python/` scripts |
+| Git | `build/clean-untracked.ps1` (tracked-file detection) |
+| UnrealBuildTool | `build/clean-and-regen.ps1` |
+| RunUAT.bat | `build/headless-cook.ps1` |
+| Microsoft Word | `convert/convert_docx_to_pdf.ps1` |
+| Microsoft Edge | `convert/convert_html_to_pdf.ps1` |
+| UE5 Python Editor Script Plugin | `python/` scripts |
+
+---
+
+## Notes
+
+- All JSON outputs go to `tools/outputs/` (add to `.gitignore`).
+- Scripts are project-agnostic and work with any UE5 project structure.
+- PowerShell scripts auto-detect UE5 engine paths (can be overridden with `-EnginePath`).

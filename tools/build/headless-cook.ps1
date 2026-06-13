@@ -1,4 +1,4 @@
-<#
+﻿<#
     Run a headless Unreal Automation Tool (UAT) build-cook-run cycle.
     Bypasses the editor GUI for faster, memory-efficient local builds and nightlies.
 
@@ -20,7 +20,7 @@ param(
 )
 
 if (-not $ProjectRoot) {
-    $ProjectRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+    $ProjectRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
 }
 
 # Auto-detect .uproject
@@ -91,3 +91,4 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "Build failed with exit code $LASTEXITCODE." -ForegroundColor Red
     exit $LASTEXITCODE
 }
+

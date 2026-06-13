@@ -1,10 +1,10 @@
-param(
+﻿param(
     [string]$HtmlDirectory = '',
     [string]$EdgePath = 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
 )
 
 if (-not $HtmlDirectory) {
-    $HtmlDirectory = Join-Path (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)) "Documentation"
+    $HtmlDirectory = Join-Path (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))) "Documentation"
 }
 
 if (-not (Test-Path $HtmlDirectory)) {
@@ -31,3 +31,4 @@ foreach ($file in $htmlFiles) {
     Start-Sleep -Seconds 1
 }
 Write-Host "Done!"
+

@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$ProjectRoot = '',
     [string]$OutputPath = '',
     [string[]]$PluginNames = @()
@@ -7,7 +7,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 if (-not $ProjectRoot) {
-    $ProjectRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+    $ProjectRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
 }
 
 if (-not $OutputPath) {
@@ -103,3 +103,4 @@ $json = $result | ConvertTo-Json -Depth 8
 Set-Content -LiteralPath $OutputPath -Value $json -Encoding UTF8
 
 Write-Host "Wrote $totalAnimations animations + $totalPoseSearch pose search assets ($($result.totalAssets) total) to: $OutputPath"
+

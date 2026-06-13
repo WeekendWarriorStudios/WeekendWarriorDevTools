@@ -1,4 +1,4 @@
-<#
+﻿<#
     Count all Content/ assets grouped by file extension and top-level folder.
     Gives a quick structural overview of the project's asset composition.
 
@@ -11,7 +11,7 @@ param(
 )
 
 if (-not $ProjectRoot) {
-    $ProjectRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+    $ProjectRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
 }
 
 if (-not $OutputPath) {
@@ -67,3 +67,4 @@ $result = [ordered]@{
 
 $result | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $OutputPath -Encoding UTF8
 Write-Host "Counted $(@($allFiles).Count) files ($([math]::Round($totalSize/1MB,1)) MB). Wrote: $OutputPath"
+

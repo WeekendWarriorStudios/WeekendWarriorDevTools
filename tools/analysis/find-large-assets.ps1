@@ -1,4 +1,4 @@
-<#
+﻿<#
     Find large assets in the project's Content folder.
     Outputs a ranked list of assets exceeding the size threshold.
 
@@ -15,7 +15,7 @@ param(
 )
 
 if (-not $ProjectRoot) {
-    $ProjectRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+    $ProjectRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
 }
 
 if (-not $OutputPath) {
@@ -55,3 +55,4 @@ $result = [ordered]@{
 
 $result | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $OutputPath -Encoding UTF8
 Write-Host "Found $(@($assets).Count) assets >= ${ThresholdMB}MB. Wrote: $OutputPath"
+

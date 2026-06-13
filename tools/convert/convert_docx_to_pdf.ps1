@@ -1,10 +1,10 @@
-param(
+﻿param(
     [string]$SourceDirectory = '',
     [string]$Filter = '*.docx'
 )
 
 if (-not $SourceDirectory) {
-    $SourceDirectory = Join-Path (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)) "Documentation\Quality Documents\00 Technical Standards"
+    $SourceDirectory = Join-Path (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))) "Documentation\Quality Documents\00 Technical Standards"
 }
 
 if (-not (Test-Path $SourceDirectory)) {
