@@ -21,6 +21,11 @@ param(
 
 if (-not $ProjectRoot) {
     $ProjectRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
+    # Fallback for submodule nesting: if no .uproject found, try one level up
+    $testUproject = Get-ChildItem -LiteralPath $ProjectRoot -Filter '*.uproject' -File -ErrorAction SilentlyContinue
+    if (-not $testUproject) {
+        $ProjectRoot = Split-Path -Parent $ProjectRoot
+    }
 }
 
 # Auto-detect .uproject
@@ -91,4 +96,5 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "Build failed with exit code $LASTEXITCODE." -ForegroundColor Red
     exit $LASTEXITCODE
 }
+
 
