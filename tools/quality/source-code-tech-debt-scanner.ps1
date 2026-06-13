@@ -20,6 +20,14 @@ if (-not (Test-Path $sourceRoot)) { Write-Host "Source folder not found: $source
 
 $excludeFolders = @('ThirdParty','Plugins','External','Vendor')
 
+# Auto-detect git submodules
+$gitmodulesPath = Join-Path $ProjectRoot '.gitmodules'
+if (Test-Path -LiteralPath $gitmodulesPath) {
+    $content = Get-Content -LiteralPath $gitmodulesPath -Raw -ErrorAction SilentlyContinue
+    $submodulePaths = [regex]::Matches($content, 'path\s*=\s*([^\s\n]+)') | ForEach-Object { $_.Groups[1].Value }
+    if ($submodulePaths) { $excludeFolders += $submodulePaths }
+}
+
 $files = Get-ChildItem -LiteralPath $sourceRoot -Recurse -Include '*.cpp','*.h' -File -ErrorAction SilentlyContinue | Where-Object {
     $p = $_.FullName
     foreach ($ex in $excludeFolders) { if ($p -match "\\$ex\\") { return $false } }
