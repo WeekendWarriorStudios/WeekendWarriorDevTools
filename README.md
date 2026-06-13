@@ -33,6 +33,8 @@ tools/
 | `clean-and-regen.ps1` | Deep-clean all build artifacts **and** regenerate Visual Studio project files via UnrealBuildTool |
 | `headless-cook.ps1` | Run a headless build-cook-package cycle via UAT (`RunUAT.bat`) without opening the editor |
 | `setup-daily-cleanup.ps1` | Register a Windows Scheduled Task to run `clean-untracked.ps1` daily (requires Admin) |
+| `build-log-parser.ps1` | Parse build/cook logs, extract warnings/errors into a ranked JSON report |
+| `shader-monitor.ps1` | Monitor shader compilation status during cook, report on stalled/failed shaders |
 
 **Usage:**
 ```powershell
@@ -64,6 +66,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\inventory\list-install
 | `asset-prefix-breakdown.ps1` | Categorize `.uasset` files by naming prefix (`SM_`, `T_`, `BP_`, etc.) and flag cleanup violations |
 | `count-assets-by-type.ps1` | Count all Content assets grouped by file extension and top-level folder |
 | `find-large-assets.ps1` | Find assets above size threshold (default 10 MB), ranked by size |
+| `memory-profile-reporter.ps1` | Parse memory profiler dumps, generate size breakdowns by category |
+| `dependency-analyzer.ps1` | Find unused assets, circular dependencies, and broken redirects |
+| `texture-streaming-analyzer.ps1` | Analyze streaming pool usage vs. config, flag oversubscription |
 
 **Usage:**
 ```powershell
@@ -101,13 +106,27 @@ These scripts run **inside the Unreal Editor** via `Edit > Execute Python Script
 |--------|-------------|
 | `lint_asset_names.py` | Scan Content path and auto-rename assets violating UE5 naming conventions (`T_`, `SM_`, `BP_`, etc.) — supports dry-run |
 | `generate_orm_texture.py` | Create channel-packed ORM texture asset (R=AO, G=Roughness, B=Metallic) from three source textures |
+| `validate-asset-data.py` | Scan Content for broken references, missing materials, orphaned textures, redirect chains |
+| `blueprint-perf-advisor.py` | Profile heavy Blueprints, suggest optimization (Nativization, event graphs, tick settings) |
+| `localization-gatherer.py` | Auto-scan Content for FText strings, organize into .po files by category |
+| `nativization-recommender.py` | Analyze Blueprint complexity/call counts, recommend Nativization candidates |
 
 **Usage (editor Python console):**
 ```python
 import sys
 sys.path.insert(0, r"A:\Projects\MyGame\tools\python\assets")
-import lint_asset_names
-lint_asset_names.lint_and_fix_asset_names("/Game/MyProject", dry_run=True)
+
+# Validate asset integrity
+import validate_asset_data
+validate_asset_data.validate_all("/Game/", dry_run=True)
+
+# Get Blueprint optimization suggestions
+import blueprint_perf_advisor
+blueprint_perf_advisor.analyze_blueprints("/Game/", max_results=20)
+
+# Find Nativization candidates
+import nativization_recommender
+nativization_recommender.recommend_nativization("/Game/", target_count=10)
 ```
 
 ### python/level/ — Level/World Automation
@@ -115,11 +134,18 @@ lint_asset_names.lint_and_fix_asset_names("/Game/MyProject", dry_run=True)
 | Script | Description |
 |--------|-------------|
 | `spawn_procedural_grid.py` | Spawn actors in configurable rows×cols grid in current level, with dry-run and clear utilities |
+| `world-partition-analyzer.py` | Analyze World Partition cell sizes, load distribution, streaming density |
 
 **Usage (editor Python console):**
 ```python
 import sys
 sys.path.insert(0, r"A:\Projects\MyGame\tools\python\level")
+
+# Analyze world partition efficiency
+import world_partition_analyzer
+world_partition_analyzer.analyze_world_partition(max_cells=50)
+
+# Procedural grid spawning
 import spawn_procedural_grid
 spawn_procedural_grid.spawn_grid(
     actor_path="/Game/Core/Environment/BP_GridNode.BP_GridNode_C",
