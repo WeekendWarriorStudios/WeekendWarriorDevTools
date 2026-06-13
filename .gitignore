@@ -1,0 +1,13 @@
+# Tool-generated output files
+tools/outputs/
+
+# OS
+.DS_Store
+Thumbs.db
+*.lnk
+
+# Editor
+.vscode/
+.idea/
+*.suo
+*.user
