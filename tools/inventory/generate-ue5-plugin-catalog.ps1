@@ -9,7 +9,8 @@ if (-not $EngineRoot) {
         'C:\Program Files\Epic Games\UE_5.7\Engine',
         'C:\Program Files (x86)\Epic Games\UE_5.7\Engine',
         'D:\Epic Games\UE_5.7\Engine',
-        'E:\Epic Games\UE_5.7\Engine'
+        'E:\Epic Games\UE_5.7\Engine',
+        'A:\GE\UE_5.7\Engine'
     )
 
     foreach ($path in $possibleEngines) {

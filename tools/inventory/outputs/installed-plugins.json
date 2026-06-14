@@ -1,0 +1,249 @@
+﻿{
+    "generated":  "2026-06-14T06:46:28-07:00",
+    "projectFile":  "ColossusRising.uproject",
+    "summary":  {
+                    "gameFeatures":  0,
+                    "projectPlugins":  12,
+                    "enginePlugins":  24,
+                    "contentPacks":  2
+                },
+    "gameFeatures":  [
+
+                     ],
+    "projectPlugins":  [
+                           {
+                               "name":  "AsyncLoadingScreen",
+                               "enabled":  true,
+                               "path":  "Plugins/AsyncLoadingScreen",
+                               "friendlyName":  "Async Loading Screen",
+                               "version":  "1.6.1",
+                               "description":  "Allows you to configure a Loading Screen system in the project settings easily and automatically add a Loading Screen in your game whenever you open a new level.",
+                               "category":  "Loading Screen",
+                               "createdBy":  "Truong Bui",
+                               "marketplaceUrl":  "com.epicgames.launcher://ue/marketplace/product/01f39767dc6b4290877f38365787cbf8"
+                           },
+                           {
+                               "name":  "EOSIntegrationKit",
+                               "enabled":  true,
+                               "path":  "Plugins/EOSIntegrationKit",
+                               "friendlyName":  "EOS Integration Kit",
+                               "version":  "4.85",
+                               "description":  "EIK (Epic Online Services Integration Kit) is a plugin that enables seamless integration between Epic Online Services (EOS) and Unreal Engine. The plugin provides access to the EOS SDK (Software Development Kit) within Unreal Engine, allowing developers to easily implement features such as matchmaking, achievements, leaderboards, and more.",
+                               "category":  "Betide Studio",
+                               "createdBy":  "Betide Studio",
+                               "marketplaceUrl":  "com.epicgames.launcher://ue/marketplace/product/dba0aa05bdd144e69405653a387ad63e"
+                           },
+                           {
+                               "name":  "GF_CardSystem",
+                               "enabled":  true,
+                               "path":  "Plugins/GameFeatures/GF_CardSystem",
+                               "friendlyName":  "Card System",
+                               "version":  "1.0",
+                               "description":  "Game Feature plugin for the card-based ability system.",
+                               "category":  "GameFeatures",
+                               "createdBy":  null,
+                               "marketplaceUrl":  null
+                           },
+                           {
+                               "name":  "GF_ChimeraBuilder",
+                               "enabled":  true,
+                               "path":  "Plugins/GameFeatures/GF_ChimeraBuilder",
+                               "friendlyName":  "Chimera Builder",
+                               "version":  "1.0",
+                               "description":  "Game Feature plugin for chimera construction and customization.",
+                               "category":  "GameFeatures",
+                               "createdBy":  null,
+                               "marketplaceUrl":  null
+                           },
+                           {
+                               "name":  "GF_Combat",
+                               "enabled":  true,
+                               "path":  "Plugins/GameFeatures/GF_Combat",
+                               "friendlyName":  "Combat",
+                               "version":  "1.0",
+                               "description":  "Game Feature plugin for combat mechanics and resolution.",
+                               "category":  "GameFeatures",
+                               "createdBy":  null,
+                               "marketplaceUrl":  null
+                           },
+                           {
+                               "name":  "GF_Dismemberment",
+                               "enabled":  true,
+                               "path":  "Plugins/GameFeatures/GF_Dismemberment",
+                               "friendlyName":  "Dismemberment",
+                               "version":  "1.0",
+                               "description":  "Game Feature plugin for chimera dismemberment, gore effects, and ChaosFlesh integration.",
+                               "category":  "GameFeatures",
+                               "createdBy":  null,
+                               "marketplaceUrl":  null
+                           },
+                           {
+                               "name":  "GF_Environment",
+                               "enabled":  true,
+                               "path":  "Plugins/GameFeatures/GF_Environment",
+                               "friendlyName":  "Environment",
+                               "version":  "1.0",
+                               "description":  "Game Feature plugin for environmental hazards, arenas, and world state.",
+                               "category":  "GameFeatures",
+                               "createdBy":  null,
+                               "marketplaceUrl":  null
+                           },
+                           {
+                               "name":  "GF_Traversal",
+                               "enabled":  true,
+                               "path":  "Plugins/GameFeatures/GF_Traversal",
+                               "friendlyName":  "TraversalSystem",
+                               "version":  "1.0",
+                               "description":  "Tier-1 Game Feature plugin providing Chaos Mover 2.0 locomotion, quadruped/flight/burrowing movement modes, network prediction, and voxel terrain traversal for Colossus Rising.",
+                               "category":  "GameFeatures",
+                               "createdBy":  "Weekend Warrior Studios",
+                               "marketplaceUrl":  null
+                           },
+                           {
+                               "name":  "MatchDirector",
+                               "enabled":  true,
+                               "path":  "Plugins/GameFeatures/MatchDirector",
+                               "friendlyName":  "Match Director",
+                               "version":  "1.0",
+                               "description":  "Game Feature plugin orchestrating the modular match gameplay loop: match lifecycle, pacing, dynamic AI intensity, spawning, and win-condition / reward resolution.",
+                               "category":  "GameFeatures",
+                               "createdBy":  "Weekend Warrior Studios",
+                               "marketplaceUrl":  null
+                           },
+                           {
+                               "name":  "PCGExtendedToolkit",
+                               "enabled":  true,
+                               "path":  "Plugins/PCGExtendedToolkit",
+                               "friendlyName":  "PCGEx",
+                               "version":  "0.75.20",
+                               "description":  "A rather large toolset that expand on existing PCG capabilities in unique ways.",
+                               "category":  "PCG",
+                               "createdBy":  "TimothÃ© Lapetite",
+                               "marketplaceUrl":  null
+                           },
+                           {
+                               "name":  "ThreepeatAnimTools",
+                               "enabled":  true,
+                               "path":  "Plugins/ThreepeatAnimTools",
+                               "friendlyName":  "Threepeat Anim Tools (Tatools)",
+                               "version":  "1.0",
+                               "description":  null,
+                               "category":  "Other",
+                               "createdBy":  "Threepeat Games",
+                               "marketplaceUrl":  "com.epicgames.launcher://ue/Fab/product/576ae5f6-df60-42cc-b0e7-5681beb6d585"
+                           },
+                           {
+                               "name":  "Voxel",
+                               "enabled":  true,
+                               "path":  "Plugins/VoxelPlugin",
+                               "friendlyName":  "Voxel Plugin",
+                               "version":  "Unknown",
+                               "description":  "State-of-the-art voxel technology for Unreal Engine",
+                               "category":  "Landscape",
+                               "createdBy":  "voxelplugin.com",
+                               "marketplaceUrl":  null
+                           }
+                       ],
+    "enginePlugins":  [
+                          {
+                              "name":  "AnimationWarping",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "AsyncMessageSystem",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "ChaosMover",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "CommonUI",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "ContextualAnimation",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "GameFeatures",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "GameplayAbilities",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "GameplayStateTree",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "GeometryScripting",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "ModelingToolsEditorMode",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "ModularGameplay",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "MotionTrajectory",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "MotionWarping",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "Mover",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "MoverExamples",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "MoverIntegrations",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "OnlineSubsystemEOS",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "PCG",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "PCGGeometryScriptInterop",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "PhysicsControl",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "PoseSearch",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "SmartObjects",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "StateTree",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "TargetingSystem",
+                              "enabled":  true
+                          }
+                      ],
+    "contentPacks":  [
+                         "FluidNinjaLive",
+                         "UltraDynamicSky"
+                     ]
+}

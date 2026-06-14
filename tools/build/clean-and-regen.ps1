@@ -9,7 +9,7 @@
 #>
 param(
     [string]$ProjectRoot = '',
-    [string]$EnginePath  = '',
+    [string]$EnginePath  = 'A:\GE\UE_5.7',
     [string]$UEVersion   = '5.7',
     [switch]$SkipRegen,
     [switch]$DryRun
@@ -29,16 +29,28 @@ $uprojectFiles = Get-ChildItem -LiteralPath $ProjectRoot -Filter '*.uproject' -F
 if (-not $uprojectFiles) { Write-Error "No .uproject file found in: $ProjectRoot"; exit 1 }
 $uprojectPath = $uprojectFiles[0].FullName
 
-# Auto-detect UBT if not specified
-if (-not $EnginePath) {
-    $candidates = @(
-        "C:\Program Files\Epic Games\UE_$UEVersion\Engine\Binaries\DotNET\UnrealBuildTool\UnrealBuildTool.exe",
-        "C:\Program Files (x86)\Epic Games\UE_$UEVersion\Engine\Binaries\DotNET\UnrealBuildTool\UnrealBuildTool.exe",
-        "D:\Epic Games\UE_$UEVersion\Engine\Binaries\DotNET\UnrealBuildTool\UnrealBuildTool.exe",
-        "E:\Epic Games\UE_$UEVersion\Engine\Binaries\DotNET\UnrealBuildTool\UnrealBuildTool.exe"
+# Resolve the UnrealBuildTool executable.
+# $EnginePath is an engine *root* (e.g. A:\GE\UE_5.7); UBT lives under it.
+# If no engine root was given, probe the common install locations.
+$ubtRelative = 'Engine\Binaries\DotNET\UnrealBuildTool\UnrealBuildTool.exe'
+$UbtPath = ''
+if ($EnginePath) {
+    if ($EnginePath -like '*UnrealBuildTool.exe') {
+        # Caller passed the exe directly.
+        $UbtPath = $EnginePath
+    } else {
+        $UbtPath = Join-Path $EnginePath $ubtRelative
+    }
+} else {
+    $engineRoots = @(
+        "C:\Program Files\Epic Games\UE_$UEVersion",
+        "C:\Program Files (x86)\Epic Games\UE_$UEVersion",
+        "D:\Epic Games\UE_$UEVersion",
+        "E:\Epic Games\UE_$UEVersion"
     )
-    foreach ($c in $candidates) {
-        if (Test-Path $c) { $EnginePath = $c; break }
+    foreach ($r in $engineRoots) {
+        $candidate = Join-Path $r $ubtRelative
+        if (Test-Path $candidate) { $UbtPath = $candidate; break }
     }
 }
 
@@ -79,19 +91,21 @@ if ($SkipRegen) {
     exit 0
 }
 
-if (-not $EnginePath -or -not (Test-Path $EnginePath)) {
-    Write-Host "UnrealBuildTool not found. Skipping project file regeneration." -ForegroundColor Yellow
-    Write-Host "Specify -EnginePath or -UEVersion to enable regeneration."
+if (-not $UbtPath -or -not (Test-Path $UbtPath)) {
+    Write-Host "UnrealBuildTool not found (looked for: $UbtPath). Skipping project file regeneration." -ForegroundColor Yellow
+    Write-Host "Specify -EnginePath (engine root) or -UEVersion to enable regeneration."
     exit 0
 }
 
 Write-Host "Regenerating Visual Studio project files..." -ForegroundColor Cyan
 if ($DryRun) {
-    Write-Host "  [DRY RUN] Would run: $EnginePath -projectfiles -project=`"$uprojectPath`" -game -rocket -progress" -ForegroundColor Yellow
+    Write-Host "  [DRY RUN] Would run: $UbtPath -projectfiles -project=`"$uprojectPath`" -game -rocket -progress" -ForegroundColor Yellow
 } else {
-    Start-Process -FilePath $EnginePath `
-        -ArgumentList "-projectfiles", "-project=`"$uprojectPath`"", "-game", "-rocket", "-progress" `
-        -Wait -NoNewWindow
+    & $UbtPath -projectfiles -project="$uprojectPath" -game -rocket -progress
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Project file regeneration failed (exit code $LASTEXITCODE)."
+        exit $LASTEXITCODE
+    }
     Write-Host "Done!" -ForegroundColor Green
 }
 
