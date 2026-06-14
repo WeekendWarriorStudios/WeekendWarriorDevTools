@@ -1,0 +1,404 @@
+﻿{
+    "generated":  "2026-06-14T08:14:15-07:00",
+    "project":  "A:\\Projects\\ColossusRising",
+    "total_assets":  2770,
+    "duplicate_issues":  [
+                             {
+                                 "type":  "Duplicate",
+                                 "asset_name":  "Weather_Override_Volume",
+                                 "count":  2,
+                                 "paths":  [
+                                               "UltraDynamicSky/Blueprints/Weather_Effects/Weather_Override_Volume.uasset",
+                                               "UltraDynamicSky/Textures/Icons/Weather_Override_Volume.uasset"
+                                           ],
+                                 "severity":  "Medium"
+                             },
+                             {
+                                 "type":  "Duplicate",
+                                 "asset_name":  "Dust",
+                                 "count":  3,
+                                 "paths":  [
+                                               "UltraDynamicSky/Particles/Dust.uasset",
+                                               "UltraDynamicSky/Textures/Icons/Weather/Dust.uasset",
+                                               "UltraDynamicSky/Textures/Icons/Weather/Symbols/Dust.uasset"
+                                           ],
+                                 "severity":  "Medium"
+                             },
+                             {
+                                 "type":  "Duplicate",
+                                 "asset_name":  "Forest_Example",
+                                 "count":  2,
+                                 "paths":  [
+                                               "UltraDynamicSky/Sound/Environment/Forest_Example.uasset",
+                                               "UltraDynamicSky/Sound/Environment/Forest_Example/Forest_Example.uasset"
+                                           ],
+                                 "severity":  "Medium"
+                             },
+                             {
+                                 "type":  "Duplicate",
+                                 "asset_name":  "Wind_Physics_Force",
+                                 "count":  2,
+                                 "paths":  [
+                                               "UltraDynamicSky/Blueprints/Weather_Effects/Wind_Physics_Force.uasset",
+                                               "UltraDynamicSky/Textures/Icons/Wind_Physics_Force.uasset"
+                                           ],
+                                 "severity":  "Medium"
+                             },
+                             {
+                                 "type":  "Duplicate",
+                                 "asset_name":  "MI_DensityBuffer_DetailMapped_ForVolumeSmoke",
+                                 "count":  2,
+                                 "paths":  [
+                                               "FluidNinjaLive/UseCases/010_FireAndSmoke/MaterialsNinjaOutputForVolumeSmoke/MI_DensityBuffer_DetailMapped_ForVolumeSmoke.uasset",
+                                               "FluidNinjaLive/UseCases/012_NiagaraParticleCapture/MaterialsNinjaOutput/MI_DensityBuffer_DetailMapped_ForVolumeSmoke.uasset"
+                                           ],
+                                 "severity":  "Medium"
+                             },
+                             {
+                                 "type":  "Duplicate",
+                                 "asset_name":  "MI_SimpleGradient3",
+                                 "count":  2,
+                                 "paths":  [
+                                               "FluidNinjaLive/Tutorial/Materials/MI_SimpleGradient3.uasset",
+                                               "FluidNinjaLive/UseCases/018_SnowAndSand/Misc/MI_SimpleGradient3.uasset"
+                                           ],
+                                 "severity":  "Medium"
+                             },
+                             {
+                                 "type":  "Duplicate",
+                                 "asset_name":  "LightRain",
+                                 "count":  2,
+                                 "paths":  [
+                                               "UltraDynamicSky/Textures/Icons/Weather/LightRain.uasset",
+                                               "UltraDynamicSky/Textures/Icons/Weather/Symbols/LightRain.uasset"
+                                           ],
+                                 "severity":  "Medium"
+                             },
+                             {
+                                 "type":  "Duplicate",
+                                 "asset_name":  "DustStorm",
+                                 "count":  2,
+                                 "paths":  [
+                                               "UltraDynamicSky/Textures/Icons/Weather/DustStorm.uasset",
+                                               "UltraDynamicSky/Textures/Icons/Weather/Symbols/DustStorm.uasset"
+                                           ],
+                                 "severity":  "Medium"
+                             },
+                             {
+                                 "type":  "Duplicate",
+                                 "asset_name":  "Wind_Debris",
+                                 "count":  2,
+                                 "paths":  [
+                                               "UltraDynamicSky/Materials/Weather/Wind_Debris.uasset",
+                                               "UltraDynamicSky/Particles/Wind_Debris.uasset"
+                                           ],
+                                 "severity":  "Medium"
+                             },
+                             {
+                                 "type":  "Duplicate",
+                                 "asset_name":  "Rain",
+                                 "count":  4,
+                                 "paths":  [
+                                               "UltraDynamicSky/Blueprints/Weather_Effects/Weather_Presets/Rain.uasset",
+                                               "UltraDynamicSky/Particles/Rain.uasset",
+                                               "UltraDynamicSky/Textures/Icons/Weather/Rain.uasset",
+                                               "UltraDynamicSky/Textures/Icons/Weather/Symbols/Rain.uasset"
+                                           ],
+                                 "severity":  "Medium"
+                             },
+                             {
+                                 "type":  "Duplicate",
+                                 "asset_name":  "Foggy",
+                                 "count":  3,
+                                 "paths":  [
+                                               "UltraDynamicSky/Blueprints/Weather_Effects/Weather_Presets/Foggy.uasset",
+                                               "UltraDynamicSky/Textures/Icons/Weather/Foggy.uasset",
+                                               "UltraDynamicSky/Textures/Icons/Weather/Symbols/Foggy.uasset"
+                                           ],
+                                 "severity":  "Medium"
+                             },
+                             {
+                                 "type":  "Duplicate",
+                                 "asset_name":  "T_RadialGradient_density",
+                                 "count":  2,
+                                 "paths":  [
+                                               "FluidNinjaLive/Presets/T_RadialGradient_density.uasset",
+                                               "FluidNinjaLive/Volumetrics_v2/Misc/Textures/T_RadialGradient_density.uasset"
+                                           ],
+                                 "severity":  "Medium"
+                             },
+                             {
+                                 "type":  "Duplicate",
+                                 "asset_name":  "Weather_Mask_Brush",
+                                 "count":  2,
+                                 "paths":  [
+                                               "UltraDynamicSky/Blueprints/Weather_Effects/Weather_Mask_Brush.uasset",
+                                               "UltraDynamicSky/Textures/Icons/Weather_Mask_Brush.uasset"
+                                           ],
+                                 "severity":  "Medium"
+                             },
+                             {
+                                 "type":  "Duplicate",
+                                 "asset_name":  "T_White",
+                                 "count":  2,
+                                 "paths":  [
+                                               "FluidNinjaLive/Core/Assets/T_White.uasset",
+                                               "FluidNinjaLive/Presets/T_White.uasset"
+                                           ],
+                                 "severity":  "Medium"
+                             },
+                             {
+                                 "type":  "Duplicate",
+                                 "asset_name":  "Snow",
+                                 "count":  4,
+                                 "paths":  [
+                                               "UltraDynamicSky/Blueprints/Weather_Effects/Weather_Presets/Snow.uasset",
+                                               "UltraDynamicSky/Particles/Snow.uasset",
+                                               "UltraDynamicSky/Textures/Icons/Weather/Snow.uasset",
+                                               "UltraDynamicSky/Textures/Icons/Weather/Symbols/Snow.uasset"
+                                           ],
+                                 "severity":  "Medium"
+                             },
+                             {
+                                 "type":  "Duplicate",
+                                 "asset_name":  "Cloudy",
+                                 "count":  3,
+                                 "paths":  [
+                                               "UltraDynamicSky/Blueprints/Weather_Effects/Weather_Presets/Cloudy.uasset",
+                                               "UltraDynamicSky/Textures/Icons/Weather/Cloudy.uasset",
+                                               "UltraDynamicSky/Textures/Icons/Weather/Symbols/Cloudy.uasset"
+                                           ],
+                                 "severity":  "Medium"
+                             },
+                             {
+                                 "type":  "Duplicate",
+                                 "asset_name":  "Rain_Drip_Spline",
+                                 "count":  2,
+                                 "paths":  [
+                                               "UltraDynamicSky/Blueprints/Weather_Effects/Rain_Drip_Spline.uasset",
+                                               "UltraDynamicSky/Textures/Icons/Rain_Drip_Spline.uasset"
+                                           ],
+                                 "severity":  "Medium"
+                             },
+                             {
+                                 "type":  "Duplicate",
+                                 "asset_name":  "Brush_Square",
+                                 "count":  2,
+                                 "paths":  [
+                                               "UltraDynamicSky/Meshes/Brush_Square.uasset",
+                                               "UltraDynamicSky/Textures/Weather/Mask_Brushes/Brush_Square.uasset"
+                                           ],
+                                 "severity":  "Medium"
+                             },
+                             {
+                                 "type":  "Duplicate",
+                                 "asset_name":  "Blizzard",
+                                 "count":  2,
+                                 "paths":  [
+                                               "UltraDynamicSky/Textures/Icons/Weather/Blizzard.uasset",
+                                               "UltraDynamicSky/Textures/Icons/Weather/Symbols/Blizzard.uasset"
+                                           ],
+                                 "severity":  "Medium"
+                             },
+                             {
+                                 "type":  "Duplicate",
+                                 "asset_name":  "Puddle_Fluid_Volume",
+                                 "count":  2,
+                                 "paths":  [
+                                               "UltraDynamicSky/Blueprints/Weather_Effects/Puddle_Fluid_Volume.uasset",
+                                               "UltraDynamicSky/Textures/Icons/Puddle_Fluid_Volume.uasset"
+                                           ],
+                                 "severity":  "Medium"
+                             },
+                             {
+                                 "type":  "Duplicate",
+                                 "asset_name":  "Clear_Skies",
+                                 "count":  2,
+                                 "paths":  [
+                                               "UltraDynamicSky/Blueprints/Weather_Effects/Weather_Presets/Clear_Skies.uasset",
+                                               "UltraDynamicSky/Textures/Icons/Weather/Clear_Skies.uasset"
+                                           ],
+                                 "severity":  "Medium"
+                             },
+                             {
+                                 "type":  "Duplicate",
+                                 "asset_name":  "README",
+                                 "count":  2,
+                                 "paths":  [
+                                               "UltraDynamicSky/Blueprints/README.txt",
+                                               "UltraDynamicSky/Blueprints/README.uasset"
+                                           ],
+                                 "severity":  "Medium"
+                             },
+                             {
+                                 "type":  "Duplicate",
+                                 "asset_name":  "SM_plane_300x300_LOD",
+                                 "count":  2,
+                                 "paths":  [
+                                               "FluidNinjaLive/Tutorial/Meshes/SM_plane_300x300_LOD.uasset",
+                                               "FluidNinjaLive/Volumetrics_v2/Misc/Meshes/SM_plane_300x300_LOD.uasset"
+                                           ],
+                                 "severity":  "Medium"
+                             },
+                             {
+                                 "type":  "Duplicate",
+                                 "asset_name":  "PartlyCloudy",
+                                 "count":  2,
+                                 "paths":  [
+                                               "UltraDynamicSky/Textures/Icons/Weather/PartlyCloudy.uasset",
+                                               "UltraDynamicSky/Textures/Icons/Weather/Symbols/PartlyCloudy.uasset"
+                                           ],
+                                 "severity":  "Medium"
+                             },
+                             {
+                                 "type":  "Duplicate",
+                                 "asset_name":  "T_Crumple_mod_inv",
+                                 "count":  2,
+                                 "paths":  [
+                                               "FluidNinjaLive/Presets/T_Crumple_mod_inv.uasset",
+                                               "FluidNinjaLive/Volumetrics_v2/Misc/Textures/T_Crumple_mod_inv.uasset"
+                                           ],
+                                 "severity":  "Medium"
+                             },
+                             {
+                                 "type":  "Duplicate",
+                                 "asset_name":  "Temperature_Volume",
+                                 "count":  2,
+                                 "paths":  [
+                                               "UltraDynamicSky/Blueprints/Weather_Effects/Temperature_Volume.uasset",
+                                               "UltraDynamicSky/Textures/Icons/Temperature_Volume.uasset"
+                                           ],
+                                 "severity":  "Medium"
+                             },
+                             {
+                                 "type":  "Duplicate",
+                                 "asset_name":  "Light_Snow",
+                                 "count":  2,
+                                 "paths":  [
+                                               "UltraDynamicSky/Textures/Icons/Weather/Light_Snow.uasset",
+                                               "UltraDynamicSky/Textures/Icons/Weather/Symbols/Light_Snow.uasset"
+                                           ],
+                                 "severity":  "Medium"
+                             },
+                             {
+                                 "type":  "Duplicate",
+                                 "asset_name":  "Weather_Mask_Projection_Box",
+                                 "count":  2,
+                                 "paths":  [
+                                               "UltraDynamicSky/Blueprints/Weather_Effects/Weather_Mask_Projection_Box.uasset",
+                                               "UltraDynamicSky/Textures/Icons/Weather_Mask_Projection_Box.uasset"
+                                           ],
+                                 "severity":  "Medium"
+                             },
+                             {
+                                 "type":  "Duplicate",
+                                 "asset_name":  "Radial_Storm",
+                                 "count":  3,
+                                 "paths":  [
+                                               "UltraDynamicSky/Blueprints/Weather_Effects/Radial_Storm.uasset",
+                                               "UltraDynamicSky/Particles/Radial_Storm.uasset",
+                                               "UltraDynamicSky/Textures/Icons/Radial_Storm.uasset"
+                                           ],
+                                 "severity":  "Medium"
+                             },
+                             {
+                                 "type":  "Duplicate",
+                                 "asset_name":  "Thunderstorms",
+                                 "count":  2,
+                                 "paths":  [
+                                               "UltraDynamicSky/Textures/Icons/Weather/Thunderstorms.uasset",
+                                               "UltraDynamicSky/Textures/Icons/Weather/Symbols/Thunderstorms.uasset"
+                                           ],
+                                 "severity":  "Medium"
+                             },
+                             {
+                                 "type":  "Duplicate",
+                                 "asset_name":  "MI_JetMaterial3",
+                                 "count":  2,
+                                 "paths":  [
+                                               "FluidNinjaLive/UseCases/008_Lava/MaterialsMisc/MI_JetMaterial3.uasset",
+                                               "FluidNinjaLive/UseCases/008_Lava/MaterialsSingleInputClassic/MI_JetMaterial3.uasset"
+                                           ],
+                                 "severity":  "Medium"
+                             },
+                             {
+                                 "type":  "Duplicate",
+                                 "asset_name":  "MainMenu",
+                                 "count":  2,
+                                 "paths":  [
+                                               "ColossusRising/UserInterface/Levels/MainMenu.umap",
+                                               "ColossusRising/UserInterface/Widgets/MainMenu.uasset"
+                                           ],
+                                 "severity":  "Medium"
+                             },
+                             {
+                                 "type":  "Duplicate",
+                                 "asset_name":  "MI_LightFunction3",
+                                 "count":  2,
+                                 "paths":  [
+                                               "FluidNinjaLive/UseCases/007_SmallWater/Misc/MI_LightFunction3.uasset",
+                                               "FluidNinjaLive/UseCases/014_ImprovedWorldSpace/Misc/MI_LightFunction3.uasset"
+                                           ],
+                                 "severity":  "Medium"
+                             },
+                             {
+                                 "type":  "Duplicate",
+                                 "asset_name":  "Overcast",
+                                 "count":  3,
+                                 "paths":  [
+                                               "UltraDynamicSky/Blueprints/Weather_Effects/Weather_Presets/Overcast.uasset",
+                                               "UltraDynamicSky/Textures/Icons/Weather/Overcast.uasset",
+                                               "UltraDynamicSky/Textures/Icons/Weather/Symbols/Overcast.uasset"
+                                           ],
+                                 "severity":  "Medium"
+                             },
+                             {
+                                 "type":  "Duplicate",
+                                 "asset_name":  "UDS_Environment_Sound",
+                                 "count":  2,
+                                 "paths":  [
+                                               "UltraDynamicSky/Blueprints/System/UDS_Environment_Sound.uasset",
+                                               "UltraDynamicSky/Sound/UDS_Environment_Sound.uasset"
+                                           ],
+                                 "severity":  "Medium"
+                             },
+                             {
+                                 "type":  "Duplicate",
+                                 "asset_name":  "Cloud_Wisps",
+                                 "count":  2,
+                                 "paths":  [
+                                               "UltraDynamicSky/Materials/Material_Functions/Cloud_Wisps.uasset",
+                                               "UltraDynamicSky/Textures/Sky/Cloud_Wisps.uasset"
+                                           ],
+                                 "severity":  "Medium"
+                             },
+                             {
+                                 "type":  "Duplicate",
+                                 "asset_name":  "T_Crumple_MultiLevel_Inv",
+                                 "count":  2,
+                                 "paths":  [
+                                               "FluidNinjaLive/Presets/T_Crumple_MultiLevel_Inv.uasset",
+                                               "FluidNinjaLive/Volumetrics_v2/Misc/Textures/T_Crumple_MultiLevel_Inv.uasset"
+                                           ],
+                                 "severity":  "Medium"
+                             },
+                             {
+                                 "type":  "Duplicate",
+                                 "asset_name":  "T_VelocityNull",
+                                 "count":  2,
+                                 "paths":  [
+                                               "FluidNinjaLive/Core/Assets/T_VelocityNull.uasset",
+                                               "FluidNinjaLive/Presets/T_VelocityNull.uasset"
+                                           ],
+                                 "severity":  "Medium"
+                             }
+                         ],
+    "potential_orphans":  [
+
+                          ],
+    "notes":  [
+                  "This is a static analysis. For complete dependency tracking, use UE\u0027s Asset Audit in-editor.",
+                  "Potential orphans detected by naming convention (OLD_, UNUSED_, TEMP_, DEV_, DEPRECATED_)",
+                  "Duplicates detected by basename only - manual review recommended."
+              ]
+}

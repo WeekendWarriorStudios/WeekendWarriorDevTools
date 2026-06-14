@@ -1,0 +1,27 @@
+﻿{
+    "generated":  "2026-06-14T08:14:17-07:00",
+    "project":  "A:\\Projects\\ColossusRising",
+    "pool_config":  {
+                        "streaming_pool_size_mb":  1000,
+                        "max_texture_size":  4096,
+                        "platform":  "Win64"
+                    },
+    "utilization":  {
+                        "used_mb":  896.5,
+                        "pool_size_mb":  1000,
+                        "percent_used":  89.65,
+                        "available_mb":  103.5
+                    },
+    "texture_count":  3,
+    "large_textures":  {
+                           "name":  "T_SkySphere",
+                           "size_mb":  512,
+                           "mip_levels":  10
+                       },
+    "warnings":  [
+                     {
+                         "severity":  "High",
+                         "message":  "Streaming pool is 89.65% full. Risk of exhaustion during level streaming."
+                     }
+                 ]
+}

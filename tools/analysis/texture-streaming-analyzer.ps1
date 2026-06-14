@@ -57,7 +57,7 @@ if ($StatsCsvFile -and (Test-Path -LiteralPath $StatsCsvFile)) {
     foreach ($line in $lines | Select-Object -Skip 1) {
         $parts = $line -split ','
         if ($parts.Count -ge 3) {
-            $textureStats += [ordered]@{
+            $textureStats += [PSCustomObject]@{
                 name = $parts[0].Trim()
                 size_mb = [double]$parts[1].Trim()
                 mip_levels = [int]$parts[2].Trim()
@@ -67,9 +67,9 @@ if ($StatsCsvFile -and (Test-Path -LiteralPath $StatsCsvFile)) {
 } else {
     # Generate synthetic data for demonstration
     $textureStats = @(
-        [ordered]@{ name = "T_Environment_DetailMap"; size_mb = 128.5; mip_levels = 11 }
-        [ordered]@{ name = "T_Character_Diffuse"; size_mb = 256.0; mip_levels = 9 }
-        [ordered]@{ name = "T_SkySphere"; size_mb = 512.0; mip_levels = 10 }
+        [PSCustomObject]@{ name = "T_Environment_DetailMap"; size_mb = 128.5; mip_levels = 11 }
+        [PSCustomObject]@{ name = "T_Character_Diffuse"; size_mb = 256.0; mip_levels = 9 }
+        [PSCustomObject]@{ name = "T_SkySphere"; size_mb = 512.0; mip_levels = 10 }
     )
 }
 

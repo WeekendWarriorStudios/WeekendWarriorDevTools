@@ -49,7 +49,6 @@ foreach ($asset in $allAssets) {
 
 # Detect potential issues
 $issues = @()
-$unused = @()
 $potential_orphans = @()
 
 # Look for suspicious patterns in asset names or paths
@@ -86,7 +85,7 @@ $result = [ordered]@{
     notes = @(
         "This is a static analysis. For complete dependency tracking, use UE's Asset Audit in-editor.",
         "Potential orphans detected by naming convention (OLD_, UNUSED_, TEMP_, DEV_, DEPRECATED_)",
-        "Duplicates detected by basename only — manual review recommended."
+        "Duplicates detected by basename only - manual review recommended."
     )
 }
 
