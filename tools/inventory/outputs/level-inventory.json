@@ -1,0 +1,542 @@
+﻿{
+    "generated":  "2026-06-14T08:11:55-07:00",
+    "project":  "A:\\Projects\\ColossusRising",
+    "totalMaps":  89,
+    "totalSizeMB":  45.43,
+    "maps":  [
+                 {
+                     "path":  "ColossusRising\\UserInterface\\Levels\\MainMenu.umap",
+                     "category":  "ColossusRising",
+                     "sizeMB":  0.01,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\Levels\\NinjaLive_Level00_LIVE19.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.12,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\Levels\\NinjaLive_Level01_NewIntro_LIVE18.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.52,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\Levels\\NinjaLive_Level01_OriginalIntro.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.32,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\Levels\\NinjaLive_Level02A_KeySettings_LIVE19.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.3,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\Levels\\NinjaLive_Level02B_CriticalSettings.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.21,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\Levels\\NinjaLive_Level02C_LineTracingSource.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.13,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\Levels\\NinjaLive_Level03_SimulationInputs_LIVE17.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.36,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\Levels\\NinjaLive_Level04_WorldSpace_LIVE17.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.33,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\Levels\\NinjaLive_Level05_InterfaceAndSequencerControl.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.12,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\Levels\\NinjaLive_Level07_SimplePainter.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.14,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\Levels\\NinjaLive_Level08_Roots.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.1,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\Levels\\NinjaLive_Level10A_FluidblastTranslucent.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.22,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\Levels\\NinjaLive_Level10B_FluidblastOpaque.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.28,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\Levels\\NinjaLive_Level11_Smokechamber.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.15,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\Levels\\NinjaLive_Level20A_Niagara_LIVE17.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.17,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\Levels\\NinjaLive_Level20B_Niagara_LIVE17.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.11,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\Levels\\NinjaLive_Level21_MoreKeySettings_LIVE17.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.22,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\Levels\\NinjaLive_Level23_VolumeFog_LIVE18.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.33,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\Levels\\NinjaLive_Level24A_VolumeClouds.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.12,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\Levels\\NinjaLive_Level24B_VolumeClouds.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.11,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\Levels\\NinjaLive_Level24C_VolumeClouds_Tiling.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.11,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\Levels\\NinjaLive_Level29_DetailMapping.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.36,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\Levels\\NinjaLive_Level30A_VolumeSmoke_LIVE19.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.47,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\Levels\\NinjaLive_Level30B_VolumeSmoke_LargeScale_LIVE17.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.17,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\Levels\\NinjaLive_Level31A_VolumeSmoke_Mistvalley_Unlit_LIVE17.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.5,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\Levels\\NinjaLive_Level31B_VolumeSmoke_Mistvalley_Lit_LIVE17.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.5,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\Levels\\NinjaLive_Level32_WorldSpace_SimplePainter_Quantizer.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.33,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\Levels\\NinjaLive_Level33_Tagging_LIVE19.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.2,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\Levels\\NinjaLive_Level34A_Painter_v2_Primitives_LIVE19.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.64,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\Levels\\NinjaLive_Level34B_Painter_v2_Bones_LIVE19.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.14,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\LevelsSpecial\\NinjaLive_Level12_Mistvalley.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.27,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\LevelsSpecial\\NinjaLive_Level13_Performance_SmokeChamber_Advanced.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.22,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\LevelsSpecial\\NinjaLive_Level13_Performance_SmokeChamber_Simple.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.22,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\LevelsSpecial\\NinjaLive_Level14A_Performance_Peak_Single.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.08,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\LevelsSpecial\\NinjaLive_Level14B_Performance_Peak_TenContainers.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.11,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\LevelsSpecial\\NinjaLive_Level14C_Performance_Peak_Various.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.11,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\LevelsSpecial\\NinjaLive_Level15_Performance_MemoryPooling.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.61,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\LevelsSpecial\\NinjaLive_Level16_Performance_Stress.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.21,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\LevelsSpecial\\NinjaLive_Level17_Performance_StressSimplePaint.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.35,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\LevelsSpecial\\NinjaLive_Level18_Mobile_Multitouch.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.09,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\LevelsSpecial\\NinjaLive_Level19_Mobile_Demo_Mistvalley.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.11,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\LevelsSpecial\\NinjaLive_Level22_Performance_SkeletalMeshes.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.41,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\LevelsSpecial\\NinjaLive_Level25_VolumeClouds_Impulse.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.22,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\LevelsSpecial\\NinjaLive_Level26_VolumeClouds_Titan.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.13,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\LevelsSpecial\\NinjaLive_Level27_VolumeClouds_Impacts.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.1,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Tutorial\\LevelsSpecial\\NinjaLive_Level28_VolumeClouds_Cyclone.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.09,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\UseCases\\010_FireAndSmoke\\QuixelBonfireElements\\BonfireElementsMap.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.65,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\UseCases\\Levels\\Usecase_001A_WorldSpaceWater_LIVE17.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.25,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\UseCases\\Levels\\Usecase_001B_LargeShip_LIVE19.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.19,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\UseCases\\Levels\\Usecase_002_WorldSpaceWater_LIVE17.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.47,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\UseCases\\Levels\\Usecase_003_DrivingUEwater_PLACEHOLDER.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.08,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\UseCases\\Levels\\Usecase_004A_DoubleSim_TilingWaves_LIVE18.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.29,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\UseCases\\Levels\\Usecase_004B_DoubleSim_Vortex_LIVE18.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.33,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\UseCases\\Levels\\Usecase_005_VehicleTrail.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.23,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\UseCases\\Levels\\Usecase_006_LargeWaterBodies_PLACEHOLDER.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.07,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\UseCases\\Levels\\Usecase_007_SmallWaterBodies_LIVE18.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.76,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\UseCases\\Levels\\Usecase_008A_LavaLocal.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.24,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\UseCases\\Levels\\Usecase_008B_LavaWorldSpace.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.49,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\UseCases\\Levels\\Usecase_009C_SmokePillars_Rocket.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.22,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\UseCases\\Levels\\Usecase_009D_SmokePillars_Volcano.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.2,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\UseCases\\Levels\\Usecase_010_FireAndSmoke_LIVE17.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.61,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\UseCases\\Levels\\Usecase_011_DrivingParticlesWithFluid_LIVE17.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.26,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\UseCases\\Levels\\Usecase_012A_DrivingFluidWithParticles_LIVE17.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.42,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\UseCases\\Levels\\Usecase_012B_DrivingFluidWithParticles_Fountain_LIVE17.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.24,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\UseCases\\Levels\\Usecase_012C_DrivingFluidWithParticles_Acid_LIVE17.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.24,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\UseCases\\Levels\\Usecase_013_Foliage_LIVE17.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.21,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\UseCases\\Levels\\Usecase_014A_Coastline_Quiet_LIVE17.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.71,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\UseCases\\Levels\\Usecase_014B_Coastline_Windy_LIVE17.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  1.04,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\UseCases\\Levels\\Usecase_014C_Coastline_Stormy_LIVE19.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  1.03,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\UseCases\\Levels\\Usecase_015C_SimplePainterDemo_LIVE18.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.23,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\UseCases\\Levels\\Usecase_016_Caustics_LIVE17.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.15,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\UseCases\\Levels\\Usecase_017_RiversAndLandscapes_LIVE18.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  2.11,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\UseCases\\Levels\\Usecase_018A_Snow_LIVE18.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  2.54,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\UseCases\\Levels\\Usecase_018B_Sand_LIVE18.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  3.21,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\UseCases\\LevelsSpecial\\Usecase_009A_SmokePillars_Rocket_VoluCloudsOnly.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.21,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\UseCases\\LevelsSpecial\\Usecase_009B_SmokePillars_Rocket_VoluSmokeOnly.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.21,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\UseCases\\LevelsSpecial\\Usecase_009E_SmokePillars_Painter_VoluClouds.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.19,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\UseCases\\LevelsSpecial\\Usecase_015A_Sand_Painted_LIVE18.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.26,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\UseCases\\LevelsSpecial\\Usecase_015B_Sand_Simulated_LIVE18.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.15,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\UseCases\\LevelsSpecial\\Usecase_015D_MultiLayerMaterialDemo_LIVE18.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.45,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Volumetrics_v2\\Misc\\AdditionalMountains.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.04,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Volumetrics_v2\\VolumeGeneric1_FeatureDemo_NoFluidSim.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.57,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Volumetrics_v2\\VolumeGeneric2_SmallScaleExamples_FluidSim.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  1.12,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Volumetrics_v2\\VolumeGeneric3_MediumScaleExamples_Fluidsim.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.88,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Volumetrics_v2\\VolumeGeneric4_MediumScaleExamples_NoFluidSim.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  0.31,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Volumetrics_v2\\VolumeGeneric5_LargeScaleExamples_NoFluidSim.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  3.12,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "FluidNinjaLive\\Volumetrics_v2\\VolumeGeneric6_LargeScaleExamples_FluidSim.umap",
+                     "category":  "FluidNinjaLive",
+                     "sizeMB":  2.85,
+                     "isLevelInstance":  false
+                 },
+                 {
+                     "path":  "UltraDynamicSky\\Maps\\DemoMap.umap",
+                     "category":  "UltraDynamicSky",
+                     "sizeMB":  6.46,
+                     "isLevelInstance":  false
+                 }
+             ]
+}

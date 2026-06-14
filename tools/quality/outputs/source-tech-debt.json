@@ -1,0 +1,98 @@
+﻿{
+    "generated":  "2026-06-14T08:11:25-07:00",
+    "project":  "A:\\Projects\\ColossusRising",
+    "totalFiles":  36,
+    "totalLOC":  1769,
+    "issues":  [
+                   {
+                       "file":  "Source\\ColossusRising\\UI\\Play\\CRPlaylistPanel.cpp",
+                       "line":  68,
+                       "tag":  "TODO",
+                       "text":  "Build FOnlineSessionSettings from CurrentSettings:"
+                   },
+                   {
+                       "file":  "Source\\ColossusRising\\UI\\Play\\CRQuickPlayPanel.cpp",
+                       "line":  38,
+                       "tag":  "TODO",
+                       "text":  "Use IOnlineSession to create/find an EOS session with default FCRMatchSettings."
+                   },
+                   {
+                       "file":  "Source\\ColossusRising\\UI\\Play\\CRQuickPlayPanel.cpp",
+                       "line":  45,
+                       "tag":  "TODO",
+                       "text":  "UGameplayStatics::OpenLevel(this, \"Map_City_01\","
+                   },
+                   {
+                       "file":  "Source\\ColossusRising\\UI\\Play\\CRQuickPlayPanel.cpp",
+                       "line":  57,
+                       "tag":  "TODO",
+                       "text":  "IOnlineSession::CancelFindSessions / DestroySession"
+                   },
+                   {
+                       "file":  "Source\\ColossusRising\\UI\\Play\\CRServerBrowserPanel.cpp",
+                       "line":  41,
+                       "tag":  "TODO",
+                       "text":  "Build TSharedRef\u003cFOnlineSessionSearch\u003e with:"
+                   },
+                   {
+                       "file":  "Source\\ColossusRising\\UI\\Play\\CRServerBrowserPanel.cpp",
+                       "line":  61,
+                       "tag":  "TODO",
+                       "text":  "IOnlineSession::JoinSession(0, NAME_GameSession, *SelectedServer.SessionSearchResult);"
+                   },
+                   {
+                       "file":  "Source\\ColossusRising\\UI\\Settings\\CRAudioSettingsPanel.cpp",
+                       "line":  14,
+                       "tag":  "TODO",
+                       "text":  "Pull from UCRSaveGame::AudioSettings"
+                   },
+                   {
+                       "file":  "Source\\ColossusRising\\UI\\Settings\\CRAudioSettingsPanel.cpp",
+                       "line":  55,
+                       "tag":  "TODO",
+                       "text":  "Write to UCRSaveGame::AudioSettings"
+                   },
+                   {
+                       "file":  "Source\\ColossusRising\\UI\\Settings\\CRGameplaySettingsPanel.cpp",
+                       "line":  13,
+                       "tag":  "TODO",
+                       "text":  "Load from UCRSaveGame::GameplaySettings"
+                   },
+                   {
+                       "file":  "Source\\ColossusRising\\UI\\Settings\\CRGameplaySettingsPanel.cpp",
+                       "line":  54,
+                       "tag":  "TODO",
+                       "text":  "Write to UCRSaveGame::GameplaySettings and call AsyncSaveGameToSlot"
+                   },
+                   {
+                       "file":  "Source\\ColossusRising\\UI\\Tabs\\CRChimeraLabTab.cpp",
+                       "line":  13,
+                       "tag":  "TODO",
+                       "text":  "Pull from UCRSaveGame or GameInstance chimera save slot"
+                   },
+                   {
+                       "file":  "Source\\ColossusRising\\UI\\Tabs\\CRChimeraLabTab.cpp",
+                       "line":  25,
+                       "tag":  "TODO",
+                       "text":  "Persist customization data to save game"
+                   },
+                   {
+                       "file":  "Source\\ColossusRising\\UI\\Tabs\\CRLoreBookTab.cpp",
+                       "line":  23,
+                       "tag":  "TODO",
+                       "text":  "Load from UCRSaveGame"
+                   },
+                   {
+                       "file":  "Source\\ColossusRising\\UI\\Tabs\\CRLoreBookTab.cpp",
+                       "line":  27,
+                       "tag":  "TODO",
+                       "text":  "Query IOnlineAchievements"
+                   },
+                   {
+                       "file":  "Source\\ColossusRising\\UI\\Tabs\\CRLoreBookTab.cpp",
+                       "line":  31,
+                       "tag":  "TODO",
+                       "text":  "Load discovered beasts from UCRSaveGame"
+                   }
+               ]
+}

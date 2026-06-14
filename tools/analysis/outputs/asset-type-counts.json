@@ -1,0 +1,33 @@
+﻿{
+    "generated":  "2026-06-14T08:11:31-07:00",
+    "project":  "A:\\Projects\\ColossusRising",
+    "totalFiles":  2770,
+    "totalSizeMB":  1116.2,
+    "byExtension":  {
+                        ".otf":  {
+                                     "count":  3,
+                                     "sizeMB":  0.26
+                                 },
+                        ".ttf":  {
+                                     "count":  1,
+                                     "sizeMB":  0.23
+                                 },
+                        ".umap":  {
+                                      "count":  89,
+                                      "sizeMB":  45.43
+                                  },
+                        ".uasset":  {
+                                        "count":  2676,
+                                        "sizeMB":  1070.1
+                                    },
+                        ".txt":  {
+                                     "count":  1,
+                                     "sizeMB":  0.18
+                                 }
+                    },
+    "byFolder":  {
+                     "ColossusRising":  6,
+                     "FluidNinjaLive":  1961,
+                     "UltraDynamicSky":  803
+                 }
+}
