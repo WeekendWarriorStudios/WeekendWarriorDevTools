@@ -1,5 +1,5 @@
 ﻿param(
-    [string]$HtmlDirectory = 'A:\Projects\ColossusRising\Documentation\Design',
+    [string]$HtmlDirectory = 'A:\Projects\ColossusRising\Documentation\colossus-rising-design-documentation',
     [string]$EdgePath = 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
 )
 
