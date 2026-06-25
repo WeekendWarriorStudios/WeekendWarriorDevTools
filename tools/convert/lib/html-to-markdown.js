@@ -79,12 +79,19 @@ function convertHtmlToMarkdown(htmlPath) {
     }
 }
 
+const resolvedMarkdownDir = path.resolve(markdownDir);
+
 function processDirectory(dir, outDir) {
     const files = fs.readdirSync(dir);
     let convertedCount = 0;
 
     files.forEach((file) => {
         const fullPath = path.join(dir, file);
+        const resolvedFull = path.resolve(fullPath);
+        // Skip the output directory itself to prevent infinite recursion
+        if (resolvedFull === resolvedMarkdownDir || resolvedFull.startsWith(resolvedMarkdownDir + path.sep)) {
+            return;
+        }
         const stat = fs.statSync(fullPath);
 
         if (stat.isDirectory()) {
