@@ -666,7 +666,7 @@ if ($ScanAll) {
     )
 
     # Segments that always disqualify a file path
-    $alwaysExclude = @('Intermediate', 'Binaries', 'ThirdParty', 'PCGExtendedToolkit')
+    $alwaysExclude = @('Intermediate', 'Binaries', 'ThirdParty')
     $allExclude    = $alwaysExclude + $ExcludePlugins
 
     $headers = [System.Collections.Generic.List[string]]::new()

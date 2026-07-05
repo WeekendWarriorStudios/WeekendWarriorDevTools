@@ -16,8 +16,11 @@ Run from the Unreal Editor Python console:
     ebgd.export_all_blueprint_docs()
 
 Output layout (default):
-    Documentation/generated-api/content/Project/<Relative/Asset/Path>/<BlueprintName>.md
-    Documentation/generated-api/content/Plugins/<PluginRoot>/<Relative/Asset/Path>/<BlueprintName>.md
+    Documentation/generated-api/content/Project/<BlueprintName>.md
+    Documentation/generated-api/content/Plugins/<PluginRoot>/<BlueprintName>.md
+
+If two Blueprints in the same project/plugin bucket share the same asset name, the exporter
+keeps the flat layout and appends the former package subpath to only those colliding filenames.
 
 Asset coverage:
     - Blueprint
@@ -26,8 +29,6 @@ Asset coverage:
     - AnimBlueprint
 """
 
-import glob
-import json
 import os
 import re
 
@@ -334,10 +335,16 @@ def generate_blueprint_markdown(blueprint_name, package_path, parent_class_name,
 # Asset discovery + orchestration
 # ---------------------------------------------------------------------------
 
-# The project's own top-level content package, e.g. "/Game/ColossusRising". Everything else
-# under "/Game" (marketplace samples like FluidNinjaLive, vendored demo content, etc.) is
-# untracked in git per this project's own convention and excluded from the default scan.
-_PROJECT_CONTENT_ROOT = "/Game/ColossusRising"
+# Unreal content roots that are not authored content/plugin mounts and should not be scanned.
+_EXCLUDED_MOUNT_ROOTS = {
+    "/Engine",
+    "/Script",
+    "/Memory",
+    "/Temp",
+    "/Config",
+    "/Collections",
+    "/Developers",
+}
 
 # Asset registry class names that represent authored Blueprint assets in practice.
 # Plain Blueprint alone misses common subclasses such as UMG widgets and Anim BPs.
@@ -353,47 +360,39 @@ def _project_root():
     return unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_dir())
 
 
-def _uproject_plugin_names():
-    """Every plugin listed as enabled in <ProjectRoot>/*.uproject. This is how engine-level
-    plugins (GameplayAbilities, CommonUI, Mover, ModelContextProtocol, marketplace installs
-    like VoxelPluginInstaller, etc.) get surfaced — they have no folder under the project's
-    own Plugins/, only a .uproject entry."""
-    uproject_matches = glob.glob(os.path.join(_project_root(), "*.uproject"))
-    if not uproject_matches:
-        return []
+def _discover_mounted_scan_roots(asset_registry, exclude_plugins=None):
+    """Discover mounted content/plugin roots that Unreal currently has active.
 
-    with open(uproject_matches[0], "r", encoding="utf-8") as f:
-        data = json.load(f)
+    This follows the editor's actual mounted package paths instead of guessing from the
+    .uproject or the on-disk Plugins/ tree. /Game is always included so every project content
+    folder is scanned; non-/Game roots correspond to mounted plugin content such as /Water,
+    /CommonUI, /Voxel, etc.
+    """
+    exclude_plugins = {name.lower() for name in (exclude_plugins or [])}
+    roots = set()
 
-    return [
-        entry["Name"]
-        for entry in data.get("Plugins", [])
-        if entry.get("Enabled", True) and entry.get("Name")
-    ]
+    for cached_path in asset_registry.get_all_cached_paths():
+        package_path = str(cached_path)
+        if not package_path.startswith("/"):
+            continue
 
+        root_name = package_path.strip("/").split("/", 1)[0]
+        if not root_name:
+            continue
 
-def _plugins_folder_names():
-    """Every .uplugin found anywhere under the project's own Plugins/ folder (recursively, so
-    this covers top-level plugins as well as Plugins/GameFeatures/* and Plugins/GameModes/*,
-    which are ExplicitlyLoaded and never appear in the .uproject's Plugins list)."""
-    plugins_dir = os.path.join(_project_root(), "Plugins")
+        mount_root = f"/{root_name}"
+        if mount_root in _EXCLUDED_MOUNT_ROOTS:
+            continue
 
-    names = []
-    for dirpath, _dirnames, filenames in os.walk(plugins_dir):
-        for filename in filenames:
-            if filename.endswith(".uplugin"):
-                names.append(os.path.splitext(filename)[0])
-    return names
+        if mount_root != "/Game" and root_name.lower() in exclude_plugins:
+            continue
 
+        roots.add(mount_root)
 
-def _discover_plugin_scan_roots(exclude_plugins=None):
-    """Union of every plugin declared enabled in the .uproject and every plugin physically
-    present under this project's own Plugins/ folder — deliberately not vendor-filtered, so
-    it includes marketplace plugins (Voxel, PCGExtendedToolkit) as well as every GameFeature
-    and GameMode plugin. Pass exclude_plugins to drop specific names if needed."""
-    exclude_plugins = set(exclude_plugins or [])
-    all_names = set(_uproject_plugin_names()) | set(_plugins_folder_names())
-    return [f"/{name}" for name in sorted(all_names) if name not in exclude_plugins]
+    if "/Game" not in roots:
+        roots.add("/Game")
+
+    return sorted(roots)
 
 
 def _output_bucket(package_name):
@@ -404,33 +403,44 @@ def _output_bucket(package_name):
     return ["Plugins", root], False
 
 
-def _output_path_parts(package_name, asset_name):
-    """Mirror the package path under the documentation bucket to avoid filename collisions."""
+def _flattened_relative_package_parts(package_name):
+    return [part for part in package_name.strip("/").split("/") if part][1:-1]
+
+
+def _output_filename(package_name, asset_name, bucket_name, duplicate_counts):
+    duplicate_key = (bucket_name, asset_name)
+    if duplicate_counts.get(duplicate_key, 0) <= 1:
+        return f"{asset_name}.md"
+
+    relative_parts = _flattened_relative_package_parts(package_name)
+    suffix = "__".join(relative_parts) if relative_parts else "Root"
+    return f"{asset_name}__{suffix}.md"
+
+
+def _output_path_parts(package_name, asset_name, duplicate_counts):
+    """Flatten exports into project/plugin buckets, disambiguating only duplicate asset names."""
     dir_segments, is_project = _output_bucket(package_name)
-    package_parts = [part for part in package_name.strip("/").split("/") if part]
-    if is_project:
-        relative_parts = package_parts[2:-1]
-    else:
-        relative_parts = package_parts[1:-1]
-    return dir_segments + relative_parts, f"{asset_name}.md"
+    bucket_name = "Project" if is_project else dir_segments[1]
+    filename = _output_filename(package_name, asset_name, bucket_name, duplicate_counts)
+    return dir_segments, filename
 
 
 def export_all_blueprint_docs(output_dir=None, scan_roots=None, exclude_plugins=None):
     """
     Find every authored Blueprint asset under scan_roots and export its graphs to markdown.
 
-    scan_roots: list of content mount points to scan (e.g. ["/Game/ColossusRising", "/Combat"]).
-                Defaults to None, which scans this project's own content
-                (_PROJECT_CONTENT_ROOT) plus every plugin under this project's Plugins/ folder,
-                excluding vendor plugins (see _DEFAULT_EXCLUDED_PLUGINS / exclude_plugins).
+    scan_roots: list of content mount points to scan (e.g. ["/Game", "/Combat"]).
+                Defaults to None, which scans every mounted project-content and active plugin
+                content root currently visible to the Unreal asset registry.
     """
     if output_dir is None:
         output_dir = os.path.join(_project_root(), "Documentation", "generated-api", "content")
 
-    if scan_roots is None:
-        scan_roots = [_PROJECT_CONTENT_ROOT] + _discover_plugin_scan_roots(exclude_plugins)
-
     asset_registry = unreal.AssetRegistryHelpers.get_asset_registry()
+
+    if scan_roots is None:
+        scan_roots = _discover_mounted_scan_roots(asset_registry, exclude_plugins)
+
     editor_asset_subsystem = unreal.get_editor_subsystem(unreal.EditorAssetSubsystem)
 
     assets_by_package = {}
@@ -447,6 +457,15 @@ def export_all_blueprint_docs(output_dir=None, scan_roots=None, exclude_plugins=
     assets = [assets_by_package[key] for key in sorted(assets_by_package.keys())]
     unreal.log(f"[BlueprintGraphDocs] Scanning {scan_roots}")
     unreal.log(f"[BlueprintGraphDocs] Found {len(assets)} Blueprint asset(s).")
+
+    duplicate_counts = {}
+    for asset_data in assets:
+        package_name = str(asset_data.package_name)
+        asset_name = str(asset_data.asset_name)
+        dir_segments, is_project = _output_bucket(package_name)
+        bucket_name = "Project" if is_project else dir_segments[1]
+        duplicate_key = (bucket_name, asset_name)
+        duplicate_counts[duplicate_key] = duplicate_counts.get(duplicate_key, 0) + 1
 
     written = 0
     skipped = 0
@@ -478,7 +497,7 @@ def export_all_blueprint_docs(output_dir=None, scan_roots=None, exclude_plugins=
 
         markdown = generate_blueprint_markdown(asset_name, package_name, parent_class_name, graph_texts)
 
-        dir_segments, filename = _output_path_parts(package_name, asset_name)
+        dir_segments, filename = _output_path_parts(package_name, asset_name, duplicate_counts)
         target_dir = os.path.join(output_dir, *dir_segments)
         os.makedirs(target_dir, exist_ok=True)
 
