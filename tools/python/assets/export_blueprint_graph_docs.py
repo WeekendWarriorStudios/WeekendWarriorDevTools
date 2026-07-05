@@ -1,5 +1,5 @@
 """
-Export every Blueprint's graph nodes and pin wiring to human-readable markdown.
+Export authored Blueprint asset graphs and pin wiring to human-readable markdown.
 
 Blueprint EventGraph/FunctionGraph/MacroGraph node and pin data isn't reachable through
 generic Python reflection: UEdGraphPin stopped being a UObject around UE 4.24 (a compile-time
@@ -11,13 +11,19 @@ facility that backs Blueprint node copy/paste — then parses that text into mar
 
 Run from the Unreal Editor Python console:
     import sys
-    sys.path.insert(0, r"A:\Projects\ColossusRising\WeekendWarriorDevTools\tools\python\assets")
+    sys.path.insert(0, r"A:\\Projects\\ColossusRising\\WeekendWarriorDevTools\\tools\\python\\assets")
     import export_blueprint_graph_docs as ebgd
     ebgd.export_all_blueprint_docs()
 
 Output layout (default):
-    Documentation/generated-api/content/Project/<BlueprintName>.md
-    Documentation/generated-api/content/Plugins/<PluginRoot>/<BlueprintName>.md
+    Documentation/generated-api/content/Project/<Relative/Asset/Path>/<BlueprintName>.md
+    Documentation/generated-api/content/Plugins/<PluginRoot>/<Relative/Asset/Path>/<BlueprintName>.md
+
+Asset coverage:
+    - Blueprint
+    - WidgetBlueprint
+    - EditorUtilityWidgetBlueprint
+    - AnimBlueprint
 """
 
 import glob
@@ -333,6 +339,15 @@ def generate_blueprint_markdown(blueprint_name, package_path, parent_class_name,
 # untracked in git per this project's own convention and excluded from the default scan.
 _PROJECT_CONTENT_ROOT = "/Game/ColossusRising"
 
+# Asset registry class names that represent authored Blueprint assets in practice.
+# Plain Blueprint alone misses common subclasses such as UMG widgets and Anim BPs.
+_BLUEPRINT_ASSET_CLASS_PATHS = [
+    unreal.TopLevelAssetPath("/Script/Engine", "Blueprint"),
+    unreal.TopLevelAssetPath("/Script/UMGEditor", "WidgetBlueprint"),
+    unreal.TopLevelAssetPath("/Script/Blutility", "EditorUtilityWidgetBlueprint"),
+    unreal.TopLevelAssetPath("/Script/AnimGraph", "AnimBlueprint"),
+]
+
 
 def _project_root():
     return unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_dir())
@@ -389,9 +404,20 @@ def _output_bucket(package_name):
     return ["Plugins", root], False
 
 
+def _output_path_parts(package_name, asset_name):
+    """Mirror the package path under the documentation bucket to avoid filename collisions."""
+    dir_segments, is_project = _output_bucket(package_name)
+    package_parts = [part for part in package_name.strip("/").split("/") if part]
+    if is_project:
+        relative_parts = package_parts[2:-1]
+    else:
+        relative_parts = package_parts[1:-1]
+    return dir_segments + relative_parts, f"{asset_name}.md"
+
+
 def export_all_blueprint_docs(output_dir=None, scan_roots=None, exclude_plugins=None):
     """
-    Find every Blueprint asset under scan_roots and export its graphs to markdown.
+    Find every authored Blueprint asset under scan_roots and export its graphs to markdown.
 
     scan_roots: list of content mount points to scan (e.g. ["/Game/ColossusRising", "/Combat"]).
                 Defaults to None, which scans this project's own content
@@ -407,13 +433,18 @@ def export_all_blueprint_docs(output_dir=None, scan_roots=None, exclude_plugins=
     asset_registry = unreal.AssetRegistryHelpers.get_asset_registry()
     editor_asset_subsystem = unreal.get_editor_subsystem(unreal.EditorAssetSubsystem)
 
-    ar_filter = unreal.ARFilter(
-        class_paths=[unreal.TopLevelAssetPath("/Script/Engine", "Blueprint")],
-        recursive_classes=True,
-        package_paths=scan_roots,
-        recursive_paths=True,
-    )
-    assets = asset_registry.get_assets(ar_filter)
+    assets_by_package = {}
+    for class_path in _BLUEPRINT_ASSET_CLASS_PATHS:
+        ar_filter = unreal.ARFilter(
+            class_paths=[class_path],
+            recursive_classes=True,
+            package_paths=scan_roots,
+            recursive_paths=True,
+        )
+        for asset_data in asset_registry.get_assets(ar_filter):
+            assets_by_package[str(asset_data.package_name)] = asset_data
+
+    assets = [assets_by_package[key] for key in sorted(assets_by_package.keys())]
     unreal.log(f"[BlueprintGraphDocs] Scanning {scan_roots}")
     unreal.log(f"[BlueprintGraphDocs] Found {len(assets)} Blueprint asset(s).")
 
@@ -447,11 +478,11 @@ def export_all_blueprint_docs(output_dir=None, scan_roots=None, exclude_plugins=
 
         markdown = generate_blueprint_markdown(asset_name, package_name, parent_class_name, graph_texts)
 
-        dir_segments, _ = _output_bucket(package_name)
+        dir_segments, filename = _output_path_parts(package_name, asset_name)
         target_dir = os.path.join(output_dir, *dir_segments)
         os.makedirs(target_dir, exist_ok=True)
 
-        out_path = os.path.join(target_dir, f"{asset_name}.md")
+        out_path = os.path.join(target_dir, filename)
         with open(out_path, "w", encoding="utf-8") as f:
             f.write(markdown)
 
