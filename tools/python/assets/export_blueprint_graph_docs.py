@@ -27,6 +27,9 @@ Asset coverage:
     - WidgetBlueprint
     - EditorUtilityWidgetBlueprint
     - AnimBlueprint
+    - PCGGraph
+    - VoxelHeightGraph
+    - VoxelVolumeGraph
 """
 
 import os
@@ -331,6 +334,96 @@ def generate_blueprint_markdown(blueprint_name, package_path, parent_class_name,
     return "\n".join(lines)
 
 
+def _safe_get_editor_property(obj, property_name, default=None):
+    try:
+        return obj.get_editor_property(property_name)
+    except Exception:
+        return default
+
+
+def _generate_pcg_graph_markdown(asset_name, package_path, graph_obj):
+    lines = [f"# {asset_name}", "", f"**Path:** `{package_path}`", "**Type:** `PCGGraph`", ""]
+
+    node_paths = []
+    try:
+        node_paths = unreal.PCGExGraphMCPToolset.list_pcg_graph_nodes(package_path)
+    except Exception:
+        pass
+
+    if not node_paths:
+        lines.append("_No PCG nodes were discovered for this graph._")
+        return "\n".join(lines)
+
+    lines.append(f"{len(node_paths)} node(s).")
+    lines.append("")
+
+    for node_path in node_paths:
+        node_name = node_path.rsplit(".", 1)[-1]
+        node_obj = None
+        try:
+            node_obj = unreal.load_object(None, node_path)
+        except Exception:
+            node_obj = None
+
+        node_class = node_obj.get_class().get_name() if node_obj else "UnknownNode"
+        settings_obj = None
+        try:
+            settings_obj = node_obj.get_settings() if node_obj else None
+        except Exception:
+            settings_obj = None
+
+        settings_class = settings_obj.get_class().get_name() if settings_obj else ""
+        input_pins = []
+        output_pins = []
+        try:
+            input_pins = unreal.PCGExGraphMCPToolset.get_pcg_node_input_pin_labels(node_path)
+        except Exception:
+            input_pins = []
+        try:
+            output_pins = unreal.PCGExGraphMCPToolset.get_pcg_node_output_pin_labels(node_path)
+        except Exception:
+            output_pins = []
+
+        lines.append(f"## Node: {node_name}")
+        lines.append("")
+        lines.append(f"- **Path:** `{node_path}`")
+        lines.append(f"- **Class:** `{node_class}`")
+        if settings_class:
+            lines.append(f"- **Settings Class:** `{settings_class}`")
+        lines.append(f"- **Input Pins:** {', '.join(input_pins) if input_pins else '(none)'}")
+        lines.append(f"- **Output Pins:** {', '.join(output_pins) if output_pins else '(none)'}")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+def _generate_voxel_graph_markdown(asset_name, package_path, graph_obj):
+    class_name = graph_obj.get_class().get_name() if graph_obj else "VoxelGraph"
+    lines = [
+        f"# {asset_name}",
+        "",
+        f"**Path:** `{package_path}`",
+        f"**Type:** `{class_name}`",
+        "",
+        "_Voxel graph node internals are owned by editor-private graph classes, so this export captures discoverable asset metadata._",
+        "",
+    ]
+
+    base_graph = _safe_get_editor_property(graph_obj, "base_graph")
+    if base_graph:
+        try:
+            lines.append(f"- **Base Graph:** `{base_graph.get_path_name()}`")
+        except Exception:
+            lines.append("- **Base Graph:** (unavailable)")
+
+    graph_name = _safe_get_editor_property(graph_obj, "graph_name")
+    if graph_name:
+        lines.append(f"- **Graph Name:** `{graph_name}`")
+
+    lines.append("")
+    return "\n".join(lines)
+
+
 # ---------------------------------------------------------------------------
 # Asset discovery + orchestration
 # ---------------------------------------------------------------------------
@@ -353,6 +446,13 @@ _BLUEPRINT_ASSET_CLASS_PATHS = [
     unreal.TopLevelAssetPath("/Script/UMGEditor", "WidgetBlueprint"),
     unreal.TopLevelAssetPath("/Script/Blutility", "EditorUtilityWidgetBlueprint"),
     unreal.TopLevelAssetPath("/Script/AnimGraph", "AnimBlueprint"),
+]
+
+# Additional authored graph assets that should be scanned and converted to docs.
+_ADDITIONAL_GRAPH_ASSET_CLASS_PATHS = [
+    unreal.TopLevelAssetPath("/Script/PCG", "PCGGraph"),
+    unreal.TopLevelAssetPath("/Script/Voxel", "VoxelHeightGraph"),
+    unreal.TopLevelAssetPath("/Script/Voxel", "VoxelVolumeGraph"),
 ]
 
 
@@ -452,14 +552,36 @@ def export_all_blueprint_docs(output_dir=None, scan_roots=None, exclude_plugins=
             recursive_paths=True,
         )
         for asset_data in asset_registry.get_assets(ar_filter):
-            assets_by_package[str(asset_data.package_name)] = asset_data
+            assets_by_package[str(asset_data.package_name)] = (asset_data, "Blueprint")
+
+    for class_path in _ADDITIONAL_GRAPH_ASSET_CLASS_PATHS:
+        ar_filter = unreal.ARFilter(
+            class_paths=[class_path],
+            recursive_classes=True,
+            package_paths=scan_roots,
+            recursive_paths=True,
+        )
+        for asset_data in asset_registry.get_assets(ar_filter):
+            class_name = str(asset_data.asset_class_path.asset_name)
+            asset_kind = "Graph"
+            if class_name == "PCGGraph":
+                asset_kind = "PCGGraph"
+            elif class_name in ("VoxelHeightGraph", "VoxelVolumeGraph"):
+                asset_kind = class_name
+            assets_by_package[str(asset_data.package_name)] = (asset_data, asset_kind)
 
     assets = [assets_by_package[key] for key in sorted(assets_by_package.keys())]
     unreal.log(f"[BlueprintGraphDocs] Scanning {scan_roots}")
-    unreal.log(f"[BlueprintGraphDocs] Found {len(assets)} Blueprint asset(s).")
+    blueprint_count = sum(1 for _, kind in assets if kind == "Blueprint")
+    pcg_count = sum(1 for _, kind in assets if kind == "PCGGraph")
+    voxel_count = sum(1 for _, kind in assets if kind in ("VoxelHeightGraph", "VoxelVolumeGraph"))
+    unreal.log(
+        f"[BlueprintGraphDocs] Found {len(assets)} total asset(s): "
+        f"Blueprint={blueprint_count}, PCGGraph={pcg_count}, VoxelGraphs={voxel_count}."
+    )
 
     duplicate_counts = {}
-    for asset_data in assets:
+    for asset_data, _asset_kind in assets:
         package_name = str(asset_data.package_name)
         asset_name = str(asset_data.asset_name)
         dir_segments, is_project = _output_bucket(package_name)
@@ -470,7 +592,7 @@ def export_all_blueprint_docs(output_dir=None, scan_roots=None, exclude_plugins=
     written = 0
     skipped = 0
 
-    for asset_data in assets:
+    for asset_data, asset_kind in assets:
         package_name = str(asset_data.package_name)
         asset_name = str(asset_data.asset_name)
 
@@ -486,16 +608,21 @@ def export_all_blueprint_docs(output_dir=None, scan_roots=None, exclude_plugins=
             skipped += 1
             continue
 
-        graph_texts = dict(unreal.BlueprintGraphExportLibrary.export_blueprint_graphs_to_text(bp))
+        if asset_kind == "Blueprint":
+            graph_texts = dict(unreal.BlueprintGraphExportLibrary.export_blueprint_graphs_to_text(bp))
 
-        parent_class_name = ""
-        try:
-            parent_class = bp.get_editor_property("parent_class")
-            parent_class_name = parent_class.get_name() if parent_class else ""
-        except Exception:
-            pass
+            parent_class_name = ""
+            try:
+                parent_class = bp.get_editor_property("parent_class")
+                parent_class_name = parent_class.get_name() if parent_class else ""
+            except Exception:
+                pass
 
-        markdown = generate_blueprint_markdown(asset_name, package_name, parent_class_name, graph_texts)
+            markdown = generate_blueprint_markdown(asset_name, package_name, parent_class_name, graph_texts)
+        elif asset_kind == "PCGGraph":
+            markdown = _generate_pcg_graph_markdown(asset_name, package_name, bp)
+        else:
+            markdown = _generate_voxel_graph_markdown(asset_name, package_name, bp)
 
         dir_segments, filename = _output_path_parts(package_name, asset_name, duplicate_counts)
         target_dir = os.path.join(output_dir, *dir_segments)
