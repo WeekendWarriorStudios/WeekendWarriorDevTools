@@ -350,31 +350,80 @@ def _generate_pcg_graph_markdown(asset_name, package_path, graph_obj):
     except Exception:
         pass
 
+    node_objects = []
     if not node_paths:
+        try:
+            node_objects = list(graph_obj.get_nodes())
+        except Exception:
+            node_objects = []
+
+    if not node_paths and not node_objects:
         lines.append("_No PCG nodes were discovered for this graph._")
         return "\n".join(lines)
 
-    lines.append(f"{len(node_paths)} node(s).")
+    node_count = len(node_paths) if node_paths else len(node_objects)
+    lines.append(f"{node_count} node(s).")
     lines.append("")
 
-    for node_path in node_paths:
-        node_name = node_path.rsplit(".", 1)[-1]
-        node_obj = None
-        try:
-            node_obj = unreal.load_object(None, node_path)
-        except Exception:
+    if node_paths:
+        for node_path in node_paths:
+            node_name = node_path.rsplit(".", 1)[-1]
             node_obj = None
+            try:
+                node_obj = unreal.load_object(None, node_path)
+            except Exception:
+                node_obj = None
 
-        node_class = node_obj.get_class().get_name() if node_obj else "UnknownNode"
-        settings_obj = None
+            if not node_obj:
+                continue
+
+            lines.extend(_format_pcg_node_markdown(node_name, node_path, node_obj))
+    else:
+        for node_obj in node_objects:
+            node_name = node_obj.get_name() if node_obj else "UnknownNode"
+            node_path = node_obj.get_path_name() if node_obj else ""
+            lines.extend(_format_pcg_node_markdown(node_name, node_path, node_obj))
+
+    return "\n".join(lines)
+
+
+def _extract_pcg_pin_labels(pins):
+    labels = []
+    for pin in pins or []:
+        label = ""
         try:
-            settings_obj = node_obj.get_settings() if node_obj else None
+            props = pin.get_editor_property("properties")
+            if props:
+                label_name = props.get_editor_property("label")
+                label = str(label_name) if label_name else ""
         except Exception:
-            settings_obj = None
+            label = ""
 
-        settings_class = settings_obj.get_class().get_name() if settings_obj else ""
-        input_pins = []
-        output_pins = []
+        if not label:
+            try:
+                label = pin.get_name()
+            except Exception:
+                label = ""
+
+        labels.append(label or "(unnamed)")
+    return labels
+
+
+def _format_pcg_node_markdown(node_name, node_path, node_obj):
+    lines = []
+
+    node_class = node_obj.get_class().get_name() if node_obj else "UnknownNode"
+    settings_obj = None
+    try:
+        settings_obj = node_obj.get_settings() if node_obj else None
+    except Exception:
+        settings_obj = None
+
+    settings_class = settings_obj.get_class().get_name() if settings_obj else ""
+    input_pins = []
+    output_pins = []
+
+    if node_path:
         try:
             input_pins = unreal.PCGExGraphMCPToolset.get_pcg_node_input_pin_labels(node_path)
         except Exception:
@@ -384,17 +433,30 @@ def _generate_pcg_graph_markdown(asset_name, package_path, graph_obj):
         except Exception:
             output_pins = []
 
-        lines.append(f"## Node: {node_name}")
-        lines.append("")
-        lines.append(f"- **Path:** `{node_path}`")
-        lines.append(f"- **Class:** `{node_class}`")
-        if settings_class:
-            lines.append(f"- **Settings Class:** `{settings_class}`")
-        lines.append(f"- **Input Pins:** {', '.join(input_pins) if input_pins else '(none)'}")
-        lines.append(f"- **Output Pins:** {', '.join(output_pins) if output_pins else '(none)'}")
-        lines.append("")
+    if not input_pins:
+        try:
+            input_pins = _extract_pcg_pin_labels(node_obj.get_input_pins())
+        except Exception:
+            input_pins = []
 
-    return "\n".join(lines)
+    if not output_pins:
+        try:
+            output_pins = _extract_pcg_pin_labels(node_obj.get_output_pins())
+        except Exception:
+            output_pins = []
+
+    lines.append(f"## Node: {node_name}")
+    lines.append("")
+    if node_path:
+        lines.append(f"- **Path:** `{node_path}`")
+    lines.append(f"- **Class:** `{node_class}`")
+    if settings_class:
+        lines.append(f"- **Settings Class:** `{settings_class}`")
+    lines.append(f"- **Input Pins:** {', '.join(input_pins) if input_pins else '(none)'}")
+    lines.append(f"- **Output Pins:** {', '.join(output_pins) if output_pins else '(none)'}")
+    lines.append("")
+
+    return lines
 
 
 def _generate_voxel_graph_markdown(asset_name, package_path, graph_obj):
