@@ -1,5 +1,5 @@
 """
-Export authored Blueprint asset graphs and pin wiring to human-readable markdown.
+Export authored Blueprints, PCG/Voxel graphs, and Data Assets to human-readable markdown.
 
 Blueprint EventGraph/FunctionGraph/MacroGraph node and pin data isn't reachable through
 generic Python reflection: UEdGraphPin stopped being a UObject around UE 4.24 (a compile-time
@@ -9,27 +9,31 @@ unreal.BlueprintGraphExportLibrary.export_blueprint_graphs_to_text() (a small C+
 Plugins/ColossusMCPTools) which wraps FEdGraphUtilities::ExportNodesToText — the same engine
 facility that backs Blueprint node copy/paste — then parses that text into markdown here.
 
+Data Assets don't have that problem (UDataAsset subclasses are ordinary reflected UObjects), so
+those are dumped via plain get_editor_property/dir() introspection with no C++ bridge involved.
+
 Run from the Unreal Editor Python console:
     import sys
     sys.path.insert(0, r"A:\\Projects\\ColossusRising\\WeekendWarriorDevTools\\tools\\python\\assets")
     import export_blueprint_graph_docs as ebgd
-    ebgd.export_all_blueprint_docs()
+    ebgd.export_all_content_docs()
 
-Output layout (default):
-    Documentation/generated-api/content/Project/<BlueprintName>.md
-    Documentation/generated-api/content/Plugins/<PluginRoot>/<BlueprintName>.md
+Output layout (default), type-first:
+    Documentation/generated-api/content/Blueprint/Project/<Name>.md
+    Documentation/generated-api/content/Blueprint/<PluginRoot>/<Name>.md
+    Documentation/generated-api/content/Graph/Project/<Name>.md
+    Documentation/generated-api/content/Graph/<PluginRoot>/<Name>.md
+    Documentation/generated-api/content/DataAsset/Project/<Name>.md
+    Documentation/generated-api/content/DataAsset/<PluginRoot>/<Name>.md
 
-If two Blueprints in the same project/plugin bucket share the same asset name, the exporter
-keeps the flat layout and appends the former package subpath to only those colliding filenames.
+If two assets of the same type in the same project/plugin bucket share the same asset name, the
+exporter keeps the flat layout and appends the former package subpath to only those colliding
+filenames.
 
 Asset coverage:
-    - Blueprint
-    - WidgetBlueprint
-    - EditorUtilityWidgetBlueprint
-    - AnimBlueprint
-    - PCGGraph
-    - VoxelHeightGraph
-    - VoxelVolumeGraph
+    - Blueprint, WidgetBlueprint, EditorUtilityWidgetBlueprint, AnimBlueprint  -> "Blueprint"
+    - PCGGraph, VoxelHeightGraph, VoxelVolumeGraph                            -> "Graph"
+    - Any UDataAsset subclass (includes UPrimaryDataAsset subclasses)        -> "DataAsset"
 """
 
 import os
@@ -487,6 +491,67 @@ def _generate_voxel_graph_markdown(asset_name, package_path, graph_obj):
 
 
 # ---------------------------------------------------------------------------
+# Data Asset markdown generation
+# ---------------------------------------------------------------------------
+
+# UDataAsset instances are ordinary reflected UObjects (unlike UEdGraphPin), so their fields
+# are readable generically: dir() surfaces every Python-exposed UPROPERTY as a plain attribute,
+# and callable() reliably separates those from bound methods like get_name()/get_class().
+def _dump_object_properties(obj):
+    props = {}
+    for attr_name in dir(obj):
+        if attr_name.startswith("_"):
+            continue
+        try:
+            value = getattr(obj, attr_name)
+        except Exception:
+            continue
+        if callable(value):
+            continue
+        props[attr_name] = value
+    return props
+
+
+def _format_property_value(value):
+    try:
+        if isinstance(value, unreal.Object):
+            text = f"`{value.get_path_name()}`"
+        elif isinstance(value, (list, tuple, set, unreal.Array)):
+            items = [str(v) for v in value]
+            text = "[" + ", ".join(items) + "]" if items else "(empty)"
+        else:
+            text = str(value)
+    except Exception:
+        return "(unreadable)"
+
+    text = text.replace("|", "\\|").replace("\r\n", " ").replace("\n", " ")
+    if len(text) > 300:
+        text = text[:300] + "…"
+    return text if text else "(empty)"
+
+
+def _generate_data_asset_markdown(asset_name, package_path, obj):
+    class_name = obj.get_class().get_name() if obj else "DataAsset"
+    lines = [f"# {asset_name}", "", f"**Path:** `{package_path}`", f"**Class:** `{class_name}`", ""]
+
+    props = _dump_object_properties(obj) if obj else {}
+    if not props:
+        lines.append("_No readable properties found._")
+        lines.append("")
+        return "\n".join(lines)
+
+    lines.append("### Properties")
+    lines.append("")
+    lines.append("| Property | Value |")
+    lines.append("|----------|-------|")
+    for prop_name in sorted(props.keys()):
+        lines.append(f"| `{prop_name}` | {_format_property_value(props[prop_name])} |")
+    lines.append("")
+
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
 # Asset discovery + orchestration
 # ---------------------------------------------------------------------------
 
@@ -516,6 +581,20 @@ _ADDITIONAL_GRAPH_ASSET_CLASS_PATHS = [
     unreal.TopLevelAssetPath("/Script/Voxel", "VoxelHeightGraph"),
     unreal.TopLevelAssetPath("/Script/Voxel", "VoxelVolumeGraph"),
 ]
+
+# Any UDataAsset subclass (recursive_classes covers UPrimaryDataAsset and every project/plugin
+# DataAsset subclass, e.g. CRCardDefinition, CRChimeraPreset, CRAnatomyPartData) without having
+# to enumerate them by name.
+_DATA_ASSET_CLASS_PATH = unreal.TopLevelAssetPath("/Script/Engine", "DataAsset")
+
+# Folder an asset_kind is written under in Documentation/generated-api/content/<type>/...
+_TYPE_BUCKET_BY_KIND = {
+    "Blueprint": "Blueprint",
+    "PCGGraph": "Graph",
+    "VoxelHeightGraph": "Graph",
+    "VoxelVolumeGraph": "Graph",
+    "DataAsset": "DataAsset",
+}
 
 
 def _project_root():
@@ -557,39 +636,60 @@ def _discover_mounted_scan_roots(asset_registry, exclude_plugins=None):
     return sorted(roots)
 
 
+def _project_content_folder_name():
+    """The /Game subfolder holding this project's own authored content (matches the .uproject
+    name, e.g. 'ColossusRising'). Other packs dropped directly into Content/ as plain folders
+    rather than mounted as real plugins (e.g. Content/FluidNinjaLive, Content/UltraDynamicSky)
+    are not this project's content and should get their own bucket instead of 'Project'."""
+    uproject_path = unreal.Paths.get_project_file_path()
+    return os.path.splitext(os.path.basename(uproject_path))[0]
+
+
 def _output_bucket(package_name):
-    """Return (dir_segments, is_project) for a package like '/Game/Foo' or '/Combat/Foo'."""
-    root = package_name.strip("/").split("/", 1)[0]
-    if root == "Game":
-        return ["Project"], True
-    return ["Plugins", root], False
+    """Return (bucket_name, path_segments_the_bucket_accounts_for) for a package path:
+
+    - '/Game/<ProjectName>/...'    -> ('Project', 2)
+    - '/Game/<OtherSubfolder>/...' -> (OtherSubfolder, 2)   content dropped straight into
+                                                             Content/ that isn't a real plugin
+                                                             mount, e.g. FluidNinjaLive, UltraDynamicSky
+    - '/<PluginRoot>/...'          -> (PluginRoot, 1)
+    """
+    parts = [p for p in package_name.strip("/").split("/") if p]
+    if not parts:
+        return "Project", 1
+    if parts[0] != "Game":
+        return parts[0], 1
+    if len(parts) >= 2 and parts[1] != _project_content_folder_name():
+        return parts[1], 2
+    return "Project", 2
 
 
-def _flattened_relative_package_parts(package_name):
-    return [part for part in package_name.strip("/").split("/") if part][1:-1]
+def _flattened_relative_package_parts(package_name, segments_to_skip):
+    parts = [part for part in package_name.strip("/").split("/") if part]
+    return parts[segments_to_skip:-1]
 
 
-def _output_filename(package_name, asset_name, bucket_name, duplicate_counts):
-    duplicate_key = (bucket_name, asset_name)
+def _output_filename(package_name, asset_name, duplicate_key, duplicate_counts, segments_to_skip):
     if duplicate_counts.get(duplicate_key, 0) <= 1:
         return f"{asset_name}.md"
 
-    relative_parts = _flattened_relative_package_parts(package_name)
+    relative_parts = _flattened_relative_package_parts(package_name, segments_to_skip)
     suffix = "__".join(relative_parts) if relative_parts else "Root"
     return f"{asset_name}__{suffix}.md"
 
 
-def _output_path_parts(package_name, asset_name, duplicate_counts):
-    """Flatten exports into project/plugin buckets, disambiguating only duplicate asset names."""
-    dir_segments, is_project = _output_bucket(package_name)
-    bucket_name = "Project" if is_project else dir_segments[1]
-    filename = _output_filename(package_name, asset_name, bucket_name, duplicate_counts)
-    return dir_segments, filename
+def _output_path_parts(type_bucket, package_name, asset_name, duplicate_counts):
+    """content/<type_bucket>/<Project or bucket-name>/<file>.md, disambiguating only duplicate names."""
+    bucket_name, segments_to_skip = _output_bucket(package_name)
+    duplicate_key = (type_bucket, bucket_name, asset_name)
+    filename = _output_filename(package_name, asset_name, duplicate_key, duplicate_counts, segments_to_skip)
+    return [type_bucket, bucket_name], filename
 
 
-def export_all_blueprint_docs(output_dir=None, scan_roots=None, exclude_plugins=None):
+def export_all_content_docs(output_dir=None, scan_roots=None, exclude_plugins=None):
     """
-    Find every authored Blueprint asset under scan_roots and export its graphs to markdown.
+    Find every authored Blueprint, PCG/Voxel graph, and Data Asset under scan_roots and export
+    it to markdown under Documentation/generated-api/content/<type>/<Project|Plugin>/<name>.md.
 
     scan_roots: list of content mount points to scan (e.g. ["/Game", "/Combat"]).
                 Defaults to None, which scans every mounted project-content and active plugin
@@ -600,55 +700,60 @@ def export_all_blueprint_docs(output_dir=None, scan_roots=None, exclude_plugins=
 
     asset_registry = unreal.AssetRegistryHelpers.get_asset_registry()
 
+    # This commandlet runs very early (right after engine init), well before the AssetRegistry's
+    # background disk scan of every mounted plugin's content has finished. wait_for_completion()
+    # alone isn't enough here: per IAssetRegistry's own doc comment, it silently no-ops for assets
+    # whose classes live in plugin modules that haven't loaded yet at call time (true of most
+    # GameFeature/PCG/Voxel content this early) - it returns instantly having "waited" for nothing.
+    # search_all_assets(True) forces a genuine synchronous full disk scan instead.
+    unreal.log("[ContentDocs] Forcing a synchronous full AssetRegistry scan...")
+    asset_registry.search_all_assets(True)
+    asset_registry.wait_for_completion()
+
     if scan_roots is None:
         scan_roots = _discover_mounted_scan_roots(asset_registry, exclude_plugins)
 
     editor_asset_subsystem = unreal.get_editor_subsystem(unreal.EditorAssetSubsystem)
 
-    assets_by_package = {}
-    for class_path in _BLUEPRINT_ASSET_CLASS_PATHS:
-        ar_filter = unreal.ARFilter(
-            class_paths=[class_path],
-            recursive_classes=True,
-            package_paths=scan_roots,
-            recursive_paths=True,
-        )
-        for asset_data in asset_registry.get_assets(ar_filter):
-            assets_by_package[str(asset_data.package_name)] = (asset_data, "Blueprint")
+    def _scan(class_paths, kind_for_class_name):
+        for class_path in class_paths:
+            ar_filter = unreal.ARFilter(
+                class_paths=[class_path],
+                recursive_classes=True,
+                package_paths=scan_roots,
+                recursive_paths=True,
+            )
+            for asset_data in asset_registry.get_assets(ar_filter):
+                class_name = str(asset_data.asset_class_path.asset_name)
+                assets_by_package[str(asset_data.package_name)] = (asset_data, kind_for_class_name(class_name))
 
-    for class_path in _ADDITIONAL_GRAPH_ASSET_CLASS_PATHS:
-        ar_filter = unreal.ARFilter(
-            class_paths=[class_path],
-            recursive_classes=True,
-            package_paths=scan_roots,
-            recursive_paths=True,
-        )
-        for asset_data in asset_registry.get_assets(ar_filter):
-            class_name = str(asset_data.asset_class_path.asset_name)
-            asset_kind = "Graph"
-            if class_name == "PCGGraph":
-                asset_kind = "PCGGraph"
-            elif class_name in ("VoxelHeightGraph", "VoxelVolumeGraph"):
-                asset_kind = class_name
-            assets_by_package[str(asset_data.package_name)] = (asset_data, asset_kind)
+    assets_by_package = {}
+    _scan(_BLUEPRINT_ASSET_CLASS_PATHS, lambda _class_name: "Blueprint")
+    _scan(
+        _ADDITIONAL_GRAPH_ASSET_CLASS_PATHS,
+        lambda class_name: class_name if class_name in ("PCGGraph", "VoxelHeightGraph", "VoxelVolumeGraph") else "Graph",
+    )
+    _scan([_DATA_ASSET_CLASS_PATH], lambda _class_name: "DataAsset")
 
     assets = [assets_by_package[key] for key in sorted(assets_by_package.keys())]
-    unreal.log(f"[BlueprintGraphDocs] Scanning {scan_roots}")
+    unreal.log(f"[ContentDocs] Scanning {scan_roots}")
     blueprint_count = sum(1 for _, kind in assets if kind == "Blueprint")
     pcg_count = sum(1 for _, kind in assets if kind == "PCGGraph")
     voxel_count = sum(1 for _, kind in assets if kind in ("VoxelHeightGraph", "VoxelVolumeGraph"))
+    data_asset_count = sum(1 for _, kind in assets if kind == "DataAsset")
     unreal.log(
-        f"[BlueprintGraphDocs] Found {len(assets)} total asset(s): "
-        f"Blueprint={blueprint_count}, PCGGraph={pcg_count}, VoxelGraphs={voxel_count}."
+        f"[ContentDocs] Found {len(assets)} total asset(s): "
+        f"Blueprint={blueprint_count}, PCGGraph={pcg_count}, VoxelGraphs={voxel_count}, "
+        f"DataAsset={data_asset_count}."
     )
 
     duplicate_counts = {}
-    for asset_data, _asset_kind in assets:
+    for asset_data, asset_kind in assets:
         package_name = str(asset_data.package_name)
         asset_name = str(asset_data.asset_name)
-        dir_segments, is_project = _output_bucket(package_name)
-        bucket_name = "Project" if is_project else dir_segments[1]
-        duplicate_key = (bucket_name, asset_name)
+        type_bucket = _TYPE_BUCKET_BY_KIND[asset_kind]
+        bucket_name, _segments_to_skip = _output_bucket(package_name)
+        duplicate_key = (type_bucket, bucket_name, asset_name)
         duplicate_counts[duplicate_key] = duplicate_counts.get(duplicate_key, 0) + 1
 
     written = 0
@@ -659,34 +764,37 @@ def export_all_blueprint_docs(output_dir=None, scan_roots=None, exclude_plugins=
         asset_name = str(asset_data.asset_name)
 
         try:
-            bp = editor_asset_subsystem.load_asset(package_name)
+            obj = editor_asset_subsystem.load_asset(package_name)
         except Exception as e:
-            unreal.log_warning(f"[BlueprintGraphDocs] Failed to load {package_name}: {e}")
+            unreal.log_warning(f"[ContentDocs] Failed to load {package_name}: {e}")
             skipped += 1
             continue
 
-        if bp is None:
-            unreal.log_warning(f"[BlueprintGraphDocs] Could not load {package_name}, skipping.")
+        if obj is None:
+            unreal.log_warning(f"[ContentDocs] Could not load {package_name}, skipping.")
             skipped += 1
             continue
 
         if asset_kind == "Blueprint":
-            graph_texts = dict(unreal.BlueprintGraphExportLibrary.export_blueprint_graphs_to_text(bp))
+            graph_texts = dict(unreal.BlueprintGraphExportLibrary.export_blueprint_graphs_to_text(obj))
 
             parent_class_name = ""
             try:
-                parent_class = bp.get_editor_property("parent_class")
+                parent_class = obj.get_editor_property("parent_class")
                 parent_class_name = parent_class.get_name() if parent_class else ""
             except Exception:
                 pass
 
             markdown = generate_blueprint_markdown(asset_name, package_name, parent_class_name, graph_texts)
         elif asset_kind == "PCGGraph":
-            markdown = _generate_pcg_graph_markdown(asset_name, package_name, bp)
+            markdown = _generate_pcg_graph_markdown(asset_name, package_name, obj)
+        elif asset_kind in ("VoxelHeightGraph", "VoxelVolumeGraph"):
+            markdown = _generate_voxel_graph_markdown(asset_name, package_name, obj)
         else:
-            markdown = _generate_voxel_graph_markdown(asset_name, package_name, bp)
+            markdown = _generate_data_asset_markdown(asset_name, package_name, obj)
 
-        dir_segments, filename = _output_path_parts(package_name, asset_name, duplicate_counts)
+        type_bucket = _TYPE_BUCKET_BY_KIND[asset_kind]
+        dir_segments, filename = _output_path_parts(type_bucket, package_name, asset_name, duplicate_counts)
         target_dir = os.path.join(output_dir, *dir_segments)
         os.makedirs(target_dir, exist_ok=True)
 
@@ -694,8 +802,8 @@ def export_all_blueprint_docs(output_dir=None, scan_roots=None, exclude_plugins=
         with open(out_path, "w", encoding="utf-8") as f:
             f.write(markdown)
 
-        unreal.log(f"[BlueprintGraphDocs] Wrote {out_path}")
+        unreal.log(f"[ContentDocs] Wrote {out_path}")
         written += 1
 
-    unreal.log(f"[BlueprintGraphDocs] Done. Written: {written}  Skipped: {skipped}")
+    unreal.log(f"[ContentDocs] Done. Written: {written}  Skipped: {skipped}")
     return written, skipped

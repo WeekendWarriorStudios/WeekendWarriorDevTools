@@ -5,9 +5,17 @@
 
 .DESCRIPTION
     Single-file mode: parse one .h and write one .md.
-    Scan mode (-ScanAll): discover every .h under project Source/ and all project plugin
+    Source scan mode (-ScanAll): discover every .h under project Source/ and all project plugin
     Source/ roots (recursively), skip Intermediate/Binaries/generated files, and write
-    markdown to -OutputDir using flat project/plugin buckets.
+    markdown to -OutputDir using flat project/plugin buckets. Also covers plugins the .uproject
+    enables that have no project-level Plugins/<Name>/Source (e.g. a Marketplace plugin like
+    Voxel, installed engine-wide with only a Content-only stub left in the project) by pulling
+    their source from -EnginePath instead.
+    Content scan mode (-ScanContent): launch the Unreal Editor headlessly (PythonScriptCommandlet)
+    to scan every Blueprint, PCG/Voxel graph, and Data Asset, and write markdown to
+    -ContentOutputDir using flat <type>/<project-or-plugin> buckets. Requires the engine, since
+    .uasset internals (Blueprint graph wiring in particular) are only reachable through the
+    running editor's reflection/asset-registry APIs, not by parsing the binary file on disk.
 
 .PARAMETER HeaderFile
     Path to a single .h file (single-file mode).
@@ -18,21 +26,40 @@
 .PARAMETER ScanAll
     Scan Source/ and Plugins/GameFeatures/ for all .h files and batch-convert them.
 
+.PARAMETER ScanContent
+    Scan all Blueprints, PCG/Voxel graphs, and Data Assets (via a headless editor run) and
+    batch-convert them to markdown.  Can be combined with -ScanAll in the same invocation.
+
 .PARAMETER ProjectRoot
     UE project root directory.  Auto-detected from nearest .uproject when omitted.
 
 .PARAMETER OutputDir
-    Directory for batch output.  Defaults to
+    Directory for -ScanAll batch output.  Defaults to
     <ProjectRoot>\Documentation\generated-api\source\.
 
+.PARAMETER ContentOutputDir
+    Directory for -ScanContent batch output.  Defaults to
+    <ProjectRoot>\Documentation\generated-api\content\.
+
 .PARAMETER ExcludePlugins
-    Additional project plugin names to skip during scan.
+    Additional project plugin names to skip during scan (applies to both -ScanAll and -ScanContent).
+
+.PARAMETER EnginePath
+    Root of the Unreal Engine install (folder containing Engine\Binaries\...).  Used by
+    -ScanContent to locate UnrealEditor-Cmd.exe, and by -ScanAll to find source for enabled
+    plugins that aren't vendored under the project's own Plugins\ folder.  Defaults to
+    "A:\GE\UE_5.8".
+
+.PARAMETER DryRun
+    With -ScanContent, print the editor command line that would run instead of launching it.
 
 .EXAMPLE
     .\convert-cpp-to-markdown.ps1 "Plugins\GF_Traversal\CRChaosMoverComponent.h"
     .\convert-cpp-to-markdown.ps1 "Source\MyClass.h" -Output "Docs\MyClass.md"
     .\convert-cpp-to-markdown.ps1 -ScanAll
     .\convert-cpp-to-markdown.ps1 -ScanAll -OutputDir "Docs\API" -ExcludePlugins CommonUI
+    .\convert-cpp-to-markdown.ps1 -ScanContent
+    .\convert-cpp-to-markdown.ps1 -ScanAll -ScanContent
 #>
 param(
     [Parameter(Position = 0)]
@@ -42,11 +69,19 @@ param(
 
     [switch]$ScanAll,
 
+    [switch]$ScanContent,
+
     [string]$ProjectRoot = "",
 
     [string]$OutputDir = "",
 
-    [string[]]$ExcludePlugins = @()
+    [string]$ContentOutputDir = "",
+
+    [string[]]$ExcludePlugins = @(),
+
+    [string]$EnginePath = "A:\GE\UE_5.8",
+
+    [switch]$DryRun
 )
 
 Set-StrictMode -Version Latest
@@ -668,6 +703,49 @@ function Find-ProjectPluginSourceRoots([string]$ResolvedProjectRoot, [string[]]$
     return @($roots)
 }
 
+# Enabled-plugin entries from the .uproject's "Plugins" array (name only; a plugin listed there
+# with no matching project Plugins/ subfolder is installed at the engine level instead, e.g. a
+# Marketplace plugin like Voxel that ships its .uplugin/Source under <Engine>\Engine\Plugins\...
+# and only leaves a per-project Content-only stub behind).
+function Find-EnabledUProjectPlugins([string]$UProjectPath) {
+    if (-not (Test-Path $UProjectPath)) { return @() }
+    $json = Get-Content -LiteralPath $UProjectPath -Raw | ConvertFrom-Json
+    if (-not $json.Plugins) { return @() }
+    return @($json.Plugins | Where-Object { $_.Enabled -eq $true } | ForEach-Object { $_.Name })
+}
+
+function Find-EnginePluginSourceRoots([string]$ResolvedEnginePath, [string[]]$EnabledPluginNames, [string[]]$AlreadyFoundNames, [string[]]$ExcludedPluginNames) {
+    $enginePluginsRoot = Join-Path $ResolvedEnginePath "Engine\Plugins"
+    if (-not (Test-Path $enginePluginsRoot)) { return @() }
+
+    $alreadyFound = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($name in @($AlreadyFoundNames)) { if ($name) { [void]$alreadyFound.Add($name) } }
+
+    $excludeSet = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($name in @($ExcludedPluginNames)) { if ($name) { [void]$excludeSet.Add($name) } }
+
+    $roots = [System.Collections.Generic.List[PSCustomObject]]::new()
+    foreach ($pluginName in @($EnabledPluginNames)) {
+        if (-not $pluginName) { continue }
+        if ($alreadyFound.Contains($pluginName)) { continue }
+        if ($excludeSet.Contains($pluginName)) { continue }
+
+        $upluginFile = Get-ChildItem -Path $enginePluginsRoot -Filter "$pluginName.uplugin" -Recurse -File -ErrorAction SilentlyContinue |
+            Select-Object -First 1
+        if (-not $upluginFile) { continue }
+
+        $sourceRoot = Join-Path $upluginFile.Directory.FullName "Source"
+        if (-not (Test-Path $sourceRoot)) { continue }
+
+        $roots.Add([PSCustomObject]@{
+            PluginName = $pluginName
+            SourceRoot = $sourceRoot
+        }) | Out-Null
+    }
+
+    return @($roots)
+}
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -695,6 +773,24 @@ if ($ScanAll) {
         Write-Host "Project plugin source roots scanned : $resolved" -ForegroundColor Cyan
     } else {
         Write-Host "[WARN] No project plugin source roots found under <ProjectRoot>\\Plugins." -ForegroundColor Yellow
+    }
+
+    # Plugins the .uproject enables but that have no project-level Plugins/<Name>/Source (e.g. a
+    # Marketplace plugin like Voxel, installed engine-wide with only a Content-only stub left in
+    # the project). Pull their real source from the engine install instead.
+    $uprojectFilesForEngine = Get-ChildItem -LiteralPath $ProjectRoot -Filter '*.uproject' -File -ErrorAction SilentlyContinue
+    $enabledEnginePlugins = if ($uprojectFilesForEngine) { Find-EnabledUProjectPlugins $uprojectFilesForEngine[0].FullName } else { @() }
+    $alreadyFoundPluginNames = @($pluginRoots | ForEach-Object { $_.PluginName })
+
+    if (-not (Test-Path $EnginePath)) {
+        Write-Host "[WARN] EnginePath '$EnginePath' not found; skipping engine-installed plugin scan. Pass -EnginePath explicitly." -ForegroundColor Yellow
+    } else {
+        $enginePluginRoots = @(Find-EnginePluginSourceRoots $EnginePath $enabledEnginePlugins $alreadyFoundPluginNames $ExcludePlugins)
+        if ($enginePluginRoots.Count -gt 0) {
+            $resolvedEngine = ($enginePluginRoots | ForEach-Object { $_.PluginName } | Sort-Object -Unique) -join ", "
+            Write-Host "Engine-installed plugin source roots scanned : $resolvedEngine" -ForegroundColor Cyan
+            $pluginRoots += $enginePluginRoots
+        }
     }
 
     $headerRecords = [System.Collections.Generic.List[PSCustomObject]]::new()
@@ -789,12 +885,93 @@ if ($ScanAll) {
     }
 
     Write-Host "Done. Converted: $ok  Skipped: $skipped" -ForegroundColor Green
+}
 
-} else {
+if ($ScanContent) {
+
+    # Resolve project root
+    if (-not $ProjectRoot) {
+        $ProjectRoot = Find-ProjectRoot (Get-Location).Path
+    }
+    if (-not $ProjectRoot -or -not (Test-Path $ProjectRoot)) {
+        Write-Host "[ERROR] Could not locate .uproject. Pass -ProjectRoot explicitly." -ForegroundColor Red
+        exit 1
+    }
+    $ProjectRoot = (Resolve-Path $ProjectRoot).Path
+
+    $uprojectFiles = Get-ChildItem -LiteralPath $ProjectRoot -Filter '*.uproject' -File -ErrorAction SilentlyContinue
+    if (-not $uprojectFiles) {
+        Write-Host "[ERROR] No .uproject found under $ProjectRoot." -ForegroundColor Red
+        exit 1
+    }
+    $uprojectPath = $uprojectFiles[0].FullName
+
+    $editorCmd = Join-Path $EnginePath "Engine\Binaries\Win64\UnrealEditor-Cmd.exe"
+    if (-not (Test-Path $editorCmd)) {
+        Write-Host "[ERROR] UnrealEditor-Cmd.exe not found at $editorCmd. Pass -EnginePath explicitly." -ForegroundColor Red
+        exit 1
+    }
+
+    $exporterScript = Join-Path $ProjectRoot "WeekendWarriorDevTools\tools\python\assets\export_blueprint_graph_docs.py"
+    if (-not (Test-Path $exporterScript)) {
+        Write-Host "[ERROR] Exporter script not found at $exporterScript." -ForegroundColor Red
+        exit 1
+    }
+
+    if (-not $ContentOutputDir) {
+        $ContentOutputDir = Join-Path $ProjectRoot "Documentation\generated-api\content"
+    }
+
+    # PythonScriptCommandlet's -Script= runs exactly one file with no argv, so bridge parameters
+    # through a tiny generated bootstrap script that imports the real exporter module and calls
+    # it with this invocation's -ContentOutputDir/-ExcludePlugins.
+    $exporterDir      = Split-Path -Parent $exporterScript
+    $excludePluginsPy = "[" + (($ExcludePlugins | ForEach-Object { "r'$_'" }) -join ", ") + "]"
+    $bootstrapPath    = Join-Path $env:TEMP "cr_export_content_docs_bootstrap.py"
+
+    $bootstrapLines = @(
+        "import sys",
+        "sys.path.insert(0, r'$exporterDir')",
+        "import export_blueprint_graph_docs as ebgd",
+        "ebgd.export_all_content_docs(output_dir=r'$ContentOutputDir', exclude_plugins=$excludePluginsPy)"
+    )
+    Set-Content -LiteralPath $bootstrapPath -Value $bootstrapLines -Encoding UTF8
+
+    Write-Host "Project root   : $ProjectRoot" -ForegroundColor Cyan
+    Write-Host "Editor         : $editorCmd" -ForegroundColor Cyan
+    Write-Host "Content output : $ContentOutputDir" -ForegroundColor Cyan
+    Write-Host ""
+
+    $editorArgs = @(
+        "`"$uprojectPath`"",
+        "-run=pythonscript",
+        "-Script=`"$bootstrapPath`"",
+        "-unattended",
+        "-nopause",
+        "-nosplash",
+        "-stdout",
+        "-FullStdOutLogOutput"
+    )
+
+    if ($DryRun) {
+        Write-Host "[DRY RUN] Would run:" -ForegroundColor Yellow
+        Write-Host "  `"$editorCmd`" $($editorArgs -join ' ')" -ForegroundColor Yellow
+    } else {
+        Write-Host "Launching headless editor to scan Blueprints, PCG/Voxel graphs, and Data Assets..." -ForegroundColor Cyan
+        & $editorCmd @editorArgs
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "[ERROR] Editor content scan failed with exit code $LASTEXITCODE." -ForegroundColor Red
+            exit $LASTEXITCODE
+        }
+        Write-Host "Content scan complete." -ForegroundColor Green
+    }
+}
+
+if (-not $ScanAll -and -not $ScanContent) {
 
     # Single-file mode
     if (-not $HeaderFile) {
-        Write-Host "Provide a .h file path or use -ScanAll to batch-convert." -ForegroundColor Red
+        Write-Host "Provide a .h file path, or use -ScanAll / -ScanContent to batch-convert." -ForegroundColor Red
         exit 1
     }
     if (-not (Test-Path $HeaderFile)) {
