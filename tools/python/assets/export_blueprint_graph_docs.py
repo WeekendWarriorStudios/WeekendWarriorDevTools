@@ -646,22 +646,36 @@ def _project_content_folder_name():
 
 
 def _output_bucket(package_name):
-    """Return (bucket_name, path_segments_the_bucket_accounts_for) for a package path:
+    """Return (bucket_segments, path_segments_the_bucket_accounts_for) for a package path,
+    peeling off up to two levels so a single plugin/content-pack's assets aren't all flattened
+    into one enormous merged file later (mirrors how convert-cpp-to-markdown.ps1 buckets C++
+    plugin source by UBT module rather than by whole plugin):
 
-    - '/Game/<ProjectName>/...'    -> ('Project', 2)
-    - '/Game/<OtherSubfolder>/...' -> (OtherSubfolder, 2)   content dropped straight into
-                                                             Content/ that isn't a real plugin
-                                                             mount, e.g. FluidNinjaLive, UltraDynamicSky
-    - '/<PluginRoot>/...'          -> (PluginRoot, 1)
+    - '/Game/<ProjectName>/<Sub>/...'    -> (['Project', Sub], 3)
+    - '/Game/<ProjectName>/...'          -> (['Project'], 2)
+    - '/Game/<OtherSubfolder>/<Sub>/...' -> ([OtherSubfolder, Sub], 3)   content dropped straight
+                                                                          into Content/ that isn't
+                                                                          a real plugin mount, e.g.
+                                                                          FluidNinjaLive, UltraDynamicSky
+    - '/Game/<OtherSubfolder>/...'       -> ([OtherSubfolder], 2)
+    - '/<PluginRoot>/<Sub>/...'          -> ([PluginRoot, Sub], 2)
+    - '/<PluginRoot>/...'                -> ([PluginRoot], 1)
     """
     parts = [p for p in package_name.strip("/").split("/") if p]
     if not parts:
-        return "Project", 1
-    if parts[0] != "Game":
-        return parts[0], 1
-    if len(parts) >= 2 and parts[1] != _project_content_folder_name():
-        return parts[1], 2
-    return "Project", 2
+        return ["Project"], 1
+
+    if parts[0] == "Game":
+        root_bucket = "Project" if (len(parts) < 2 or parts[1] == _project_content_folder_name()) else parts[1]
+        base_skip = 2
+    else:
+        root_bucket = parts[0]
+        base_skip = 1
+
+    if len(parts) > base_skip + 1:
+        return [root_bucket, parts[base_skip]], base_skip + 1
+
+    return [root_bucket], base_skip
 
 
 def _flattened_relative_package_parts(package_name, segments_to_skip):
@@ -679,11 +693,11 @@ def _output_filename(package_name, asset_name, duplicate_key, duplicate_counts, 
 
 
 def _output_path_parts(type_bucket, package_name, asset_name, duplicate_counts):
-    """content/<type_bucket>/<Project or bucket-name>/<file>.md, disambiguating only duplicate names."""
-    bucket_name, segments_to_skip = _output_bucket(package_name)
-    duplicate_key = (type_bucket, bucket_name, asset_name)
+    """content/<type_bucket>/<bucket-segments...>/<file>.md, disambiguating only duplicate names."""
+    bucket_segments, segments_to_skip = _output_bucket(package_name)
+    duplicate_key = (type_bucket, tuple(bucket_segments), asset_name)
     filename = _output_filename(package_name, asset_name, duplicate_key, duplicate_counts, segments_to_skip)
-    return [type_bucket, bucket_name], filename
+    return [type_bucket] + bucket_segments, filename
 
 
 def export_all_content_docs(output_dir=None, scan_roots=None, exclude_plugins=None):
@@ -752,8 +766,8 @@ def export_all_content_docs(output_dir=None, scan_roots=None, exclude_plugins=No
         package_name = str(asset_data.package_name)
         asset_name = str(asset_data.asset_name)
         type_bucket = _TYPE_BUCKET_BY_KIND[asset_kind]
-        bucket_name, _segments_to_skip = _output_bucket(package_name)
-        duplicate_key = (type_bucket, bucket_name, asset_name)
+        bucket_segments, _segments_to_skip = _output_bucket(package_name)
+        duplicate_key = (type_bucket, tuple(bucket_segments), asset_name)
         duplicate_counts[duplicate_key] = duplicate_counts.get(duplicate_key, 0) + 1
 
     written = 0

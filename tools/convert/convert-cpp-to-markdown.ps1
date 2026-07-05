@@ -816,7 +816,10 @@ if ($ScanAll) {
             }
     }
 
-    # Plugin buckets: Plugins/<PluginName>/
+    # Plugin buckets: Plugins/<PluginName>/<ModuleName>/ (ModuleName is the immediate subfolder
+    # under the plugin's Source\, i.e. the actual UBT module - Source\PCGExCore\..., Source\
+    # PCGExCoreEditor\..., etc. Keeping that level in the output tree means a later compaction
+    # pass merges per-module instead of flattening an entire plugin into one huge file.)
     foreach ($pr in $pluginRoots) {
         Get-ChildItem -Path $pr.SourceRoot -Filter "*.h" -Recurse -ErrorAction SilentlyContinue |
             Where-Object {
@@ -828,9 +831,11 @@ if ($ScanAll) {
                 return $true
             } |
             ForEach-Object {
+                $relFromSourceRoot = $_.FullName.Substring($pr.SourceRoot.Length).TrimStart('\')
+                $moduleName = ($relFromSourceRoot -split '\\')[0]
                 $headerRecords.Add([PSCustomObject]@{
                     HeaderPath = $_.FullName
-                    BucketDir  = (Join-Path "Plugins" $pr.PluginName)
+                    BucketDir  = Join-Path "Plugins" (Join-Path $pr.PluginName $moduleName)
                     SourceRoot = $pr.SourceRoot
                 }) | Out-Null
             }
