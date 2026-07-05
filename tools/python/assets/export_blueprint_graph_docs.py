@@ -20,6 +20,8 @@ Output layout (default):
     Documentation/generated-api/content/Plugins/<PluginRoot>/<BlueprintName>.md
 """
 
+import glob
+import json
 import os
 import re
 
@@ -326,11 +328,6 @@ def generate_blueprint_markdown(blueprint_name, package_path, parent_class_name,
 # Asset discovery + orchestration
 # ---------------------------------------------------------------------------
 
-# Vendor/marketplace plugins that ship their own Blueprint content but aren't part of this
-# project's own authored code — excluded by default, matching convert-cpp-to-markdown.ps1's
-# ExcludePlugins convention (Intermediate/Binaries/ThirdParty/PCGExtendedToolkit).
-_DEFAULT_EXCLUDED_PLUGINS = {"PCGExtendedToolkit", "Voxel"}
-
 # The project's own top-level content package, e.g. "/Game/ColossusRising". Everything else
 # under "/Game" (marketplace samples like FluidNinjaLive, vendored demo content, etc.) is
 # untracked in git per this project's own convention and excluded from the default scan.
@@ -341,23 +338,47 @@ def _project_root():
     return unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_dir())
 
 
-def _discover_plugin_scan_roots(exclude_plugins=None):
-    """Return one '/<PluginName>' content mount per .uplugin under the project's own Plugins/
-    folder (recursively, so this covers both top-level plugins and Plugins/GameFeatures/*),
-    skipping vendor/third-party plugins."""
-    exclude_plugins = _DEFAULT_EXCLUDED_PLUGINS | set(exclude_plugins or [])
+def _uproject_plugin_names():
+    """Every plugin listed as enabled in <ProjectRoot>/*.uproject. This is how engine-level
+    plugins (GameplayAbilities, CommonUI, Mover, ModelContextProtocol, marketplace installs
+    like VoxelPluginInstaller, etc.) get surfaced — they have no folder under the project's
+    own Plugins/, only a .uproject entry."""
+    uproject_matches = glob.glob(os.path.join(_project_root(), "*.uproject"))
+    if not uproject_matches:
+        return []
+
+    with open(uproject_matches[0], "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    return [
+        entry["Name"]
+        for entry in data.get("Plugins", [])
+        if entry.get("Enabled", True) and entry.get("Name")
+    ]
+
+
+def _plugins_folder_names():
+    """Every .uplugin found anywhere under the project's own Plugins/ folder (recursively, so
+    this covers top-level plugins as well as Plugins/GameFeatures/* and Plugins/GameModes/*,
+    which are ExplicitlyLoaded and never appear in the .uproject's Plugins list)."""
     plugins_dir = os.path.join(_project_root(), "Plugins")
 
-    roots = []
+    names = []
     for dirpath, _dirnames, filenames in os.walk(plugins_dir):
         for filename in filenames:
-            if not filename.endswith(".uplugin"):
-                continue
-            plugin_name = os.path.splitext(filename)[0]
-            if plugin_name in exclude_plugins:
-                continue
-            roots.append(f"/{plugin_name}")
-    return roots
+            if filename.endswith(".uplugin"):
+                names.append(os.path.splitext(filename)[0])
+    return names
+
+
+def _discover_plugin_scan_roots(exclude_plugins=None):
+    """Union of every plugin declared enabled in the .uproject and every plugin physically
+    present under this project's own Plugins/ folder — deliberately not vendor-filtered, so
+    it includes marketplace plugins (Voxel, PCGExtendedToolkit) as well as every GameFeature
+    and GameMode plugin. Pass exclude_plugins to drop specific names if needed."""
+    exclude_plugins = set(exclude_plugins or [])
+    all_names = set(_uproject_plugin_names()) | set(_plugins_folder_names())
+    return [f"/{name}" for name in sorted(all_names) if name not in exclude_plugins]
 
 
 def _output_bucket(package_name):
