@@ -5,8 +5,9 @@
 
 .DESCRIPTION
     Single-file mode: parse one .h and write one .md.
-    Scan mode (-ScanAll): discover every .h under Source/ and Plugins/GameFeatures/,
-    skip Intermediate/Binaries/generated files, and write markdown to -OutputDir.
+    Scan mode (-ScanAll): discover every .h under project Source/ and all project plugin
+    Source/ roots (recursively), skip Intermediate/Binaries/generated files, and write
+    markdown to -OutputDir using flat project/plugin buckets.
 
 .PARAMETER HeaderFile
     Path to a single .h file (single-file mode).
@@ -21,17 +22,17 @@
     UE project root directory.  Auto-detected from nearest .uproject when omitted.
 
 .PARAMETER OutputDir
-    Directory for batch output.  Defaults to <ProjectRoot>\Documentation\generated-api\.
+    Directory for batch output.  Defaults to
+    <ProjectRoot>\Documentation\generated-api\source\.
 
 .PARAMETER ExcludePlugins
-    Additional plugin folder names to skip during scan. Intermediate, Binaries,
-    ThirdParty, and PCGExtendedToolkit are always excluded.
+    Additional project plugin names to skip during scan.
 
 .EXAMPLE
     .\convert-cpp-to-markdown.ps1 "Plugins\GF_Traversal\CRChaosMoverComponent.h"
     .\convert-cpp-to-markdown.ps1 "Source\MyClass.h" -Output "Docs\MyClass.md"
     .\convert-cpp-to-markdown.ps1 -ScanAll
-    .\convert-cpp-to-markdown.ps1 -ScanAll -OutputDir "Docs\API" -ExcludePlugins PCGExtendedToolkit
+    .\convert-cpp-to-markdown.ps1 -ScanAll -OutputDir "Docs\API" -ExcludePlugins CommonUI
 #>
 param(
     [Parameter(Position = 0)]
@@ -642,6 +643,31 @@ function Find-ProjectRoot([string]$StartDir) {
     return ""
 }
 
+function Find-ProjectPluginSourceRoots([string]$ResolvedProjectRoot, [string[]]$ExcludedPluginNames) {
+    $pluginsRoot = Join-Path $ResolvedProjectRoot "Plugins"
+    if (-not (Test-Path $pluginsRoot)) { return @() }
+
+    $excludeSet  = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($name in @($ExcludedPluginNames)) { if ($name) { [void]$excludeSet.Add($name) } }
+
+    $roots = [System.Collections.Generic.List[PSCustomObject]]::new()
+    Get-ChildItem -Path $pluginsRoot -Filter "*.uplugin" -Recurse -File -ErrorAction SilentlyContinue |
+        ForEach-Object {
+            $pluginName = [System.IO.Path]::GetFileNameWithoutExtension($_.Name)
+            if ($excludeSet.Contains($pluginName)) { return }
+
+            $sourceRoot = Join-Path $_.Directory.FullName "Source"
+            if (-not (Test-Path $sourceRoot)) { return }
+
+            $roots.Add([PSCustomObject]@{
+                PluginName = $pluginName
+                SourceRoot = $sourceRoot
+            }) | Out-Null
+        }
+
+    return @($roots)
+}
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -659,38 +685,66 @@ if ($ScanAll) {
     $ProjectRoot = (Resolve-Path $ProjectRoot).Path
     Write-Host "Project root : $ProjectRoot" -ForegroundColor Cyan
 
-    # Scan roots: Source/ and all of Plugins/
-    $scanRoots = @(
-        (Join-Path $ProjectRoot "Source"),
-        (Join-Path $ProjectRoot "Plugins")
-    )
-
     # Segments that always disqualify a file path
     $alwaysExclude = @('Intermediate', 'Binaries', 'ThirdParty')
-    $allExclude    = $alwaysExclude + $ExcludePlugins
 
-    $headers = [System.Collections.Generic.List[string]]::new()
-    foreach ($root in $scanRoots) {
-        if (-not (Test-Path $root)) { continue }
-        Get-ChildItem -Path $root -Filter "*.h" -Recurse -ErrorAction SilentlyContinue |
+    $pluginRoots    = @(Find-ProjectPluginSourceRoots $ProjectRoot $ExcludePlugins)
+
+    if ($pluginRoots.Count -gt 0) {
+        $resolved = ($pluginRoots | ForEach-Object { $_.PluginName } | Sort-Object -Unique) -join ", "
+        Write-Host "Project plugin source roots scanned : $resolved" -ForegroundColor Cyan
+    } else {
+        Write-Host "[WARN] No project plugin source roots found under <ProjectRoot>\\Plugins." -ForegroundColor Yellow
+    }
+
+    $headerRecords = [System.Collections.Generic.List[PSCustomObject]]::new()
+
+    # Project bucket: Source/** -> Project/
+    $projectSourceRoot = Join-Path $ProjectRoot "Source"
+    if (Test-Path $projectSourceRoot) {
+        Get-ChildItem -Path $projectSourceRoot -Filter "*.h" -Recurse -ErrorAction SilentlyContinue |
             Where-Object {
                 $path = $_.FullName
-                # Skip generated headers
                 if ($_.Name -match '\.generated\.h$') { return $false }
-                # Skip excluded path segments
-                foreach ($seg in $allExclude) {
+                foreach ($seg in $alwaysExclude) {
                     if ($path -match "\\$seg\\") { return $false }
                 }
                 return $true
             } |
-            ForEach-Object { $headers.Add($_.FullName) | Out-Null }
+            ForEach-Object {
+                $headerRecords.Add([PSCustomObject]@{
+                    HeaderPath = $_.FullName
+                    BucketDir  = "Project"
+                    SourceRoot = $projectSourceRoot
+                }) | Out-Null
+            }
     }
 
-    if ($headers.Count -eq 0) {
+    # Plugin buckets: Plugins/<PluginName>/
+    foreach ($pr in $pluginRoots) {
+        Get-ChildItem -Path $pr.SourceRoot -Filter "*.h" -Recurse -ErrorAction SilentlyContinue |
+            Where-Object {
+                $path = $_.FullName
+                if ($_.Name -match '\.generated\.h$') { return $false }
+                foreach ($seg in $alwaysExclude) {
+                    if ($path -match "\\$seg\\") { return $false }
+                }
+                return $true
+            } |
+            ForEach-Object {
+                $headerRecords.Add([PSCustomObject]@{
+                    HeaderPath = $_.FullName
+                    BucketDir  = (Join-Path "Plugins" $pr.PluginName)
+                    SourceRoot = $pr.SourceRoot
+                }) | Out-Null
+            }
+    }
+
+    if ($headerRecords.Count -eq 0) {
         Write-Host "[WARN] No headers found in scan roots." -ForegroundColor Yellow
         exit 0
     }
-    Write-Host "Found $($headers.Count) header(s) to convert." -ForegroundColor Cyan
+    Write-Host "Found $($headerRecords.Count) header(s) to convert." -ForegroundColor Cyan
 
     # Output directory
     if (-not $OutputDir) {
@@ -698,11 +752,32 @@ if ($ScanAll) {
     }
     Write-Host "Output dir   : $OutputDir`n" -ForegroundColor Cyan
 
+    # Flat output per bucket with collision-safe suffixes where needed.
+    $nameCounts = @{}
+    foreach ($rec in $headerRecords) {
+        $baseName = [System.IO.Path]::GetFileNameWithoutExtension($rec.HeaderPath)
+        $key = "$($rec.BucketDir)||$baseName"
+        if (-not $nameCounts.ContainsKey($key)) { $nameCounts[$key] = 0 }
+        $nameCounts[$key]++
+    }
+
     $ok = 0; $skipped = 0
-    foreach ($h in $headers) {
-        $rel    = $h.Substring($ProjectRoot.Length).TrimStart('\')
-        $baseMd = [System.IO.Path]::GetFileNameWithoutExtension($h) + ".md"
-        $outMd  = Join-Path $OutputDir $baseMd
+    foreach ($rec in $headerRecords) {
+        $h = $rec.HeaderPath
+        $rel = $h.Substring($ProjectRoot.Length).TrimStart('\\')
+        $baseName = [System.IO.Path]::GetFileNameWithoutExtension($h)
+        $countKey = "$($rec.BucketDir)||$baseName"
+
+        $mdName = "$baseName.md"
+        if ($nameCounts[$countKey] -gt 1) {
+            $sourceRel = $h.Substring($rec.SourceRoot.Length).TrimStart('\\')
+            $sourceDir = Split-Path -Parent $sourceRel
+            $suffix = if ($sourceDir) { ($sourceDir -replace '[\\/]+', '__') } else { 'Root' }
+            $mdName = "${baseName}__${suffix}.md"
+        }
+
+        $bucketDir = Join-Path $OutputDir $rec.BucketDir
+        $outMd = Join-Path $bucketDir $mdName
         try {
             Convert-SingleHeader $h $outMd $rel
             $ok++
