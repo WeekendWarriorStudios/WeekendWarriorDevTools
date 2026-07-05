@@ -103,11 +103,19 @@ def _parse_kv(s):
     return result
 
 
+def _unescape_cstring(s):
+    return (s.replace("\\r\\n", "\n")
+             .replace("\\n", "\n")
+             .replace("\\t", "\t")
+             .replace('\\"', '"')
+             .replace("\\\\", "\\"))
+
+
 def _strip_quotes(v):
     v = (v or "").strip()
     if len(v) >= 2 and v[0] == '"' and v[-1] == '"':
-        return v[1:-1]
-    return v
+        v = v[1:-1]
+    return _unescape_cstring(v)
 
 
 def _parse_pin(body):
@@ -318,8 +326,38 @@ def generate_blueprint_markdown(blueprint_name, package_path, parent_class_name,
 # Asset discovery + orchestration
 # ---------------------------------------------------------------------------
 
+# Vendor/marketplace plugins that ship their own Blueprint content but aren't part of this
+# project's own authored code — excluded by default, matching convert-cpp-to-markdown.ps1's
+# ExcludePlugins convention (Intermediate/Binaries/ThirdParty/PCGExtendedToolkit).
+_DEFAULT_EXCLUDED_PLUGINS = {"PCGExtendedToolkit", "Voxel"}
+
+# The project's own top-level content package, e.g. "/Game/ColossusRising". Everything else
+# under "/Game" (marketplace samples like FluidNinjaLive, vendored demo content, etc.) is
+# untracked in git per this project's own convention and excluded from the default scan.
+_PROJECT_CONTENT_ROOT = "/Game/ColossusRising"
+
+
 def _project_root():
     return unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_dir())
+
+
+def _discover_plugin_scan_roots(exclude_plugins=None):
+    """Return one '/<PluginName>' content mount per .uplugin under the project's own Plugins/
+    folder (recursively, so this covers both top-level plugins and Plugins/GameFeatures/*),
+    skipping vendor/third-party plugins."""
+    exclude_plugins = _DEFAULT_EXCLUDED_PLUGINS | set(exclude_plugins or [])
+    plugins_dir = os.path.join(_project_root(), "Plugins")
+
+    roots = []
+    for dirpath, _dirnames, filenames in os.walk(plugins_dir):
+        for filename in filenames:
+            if not filename.endswith(".uplugin"):
+                continue
+            plugin_name = os.path.splitext(filename)[0]
+            if plugin_name in exclude_plugins:
+                continue
+            roots.append(f"/{plugin_name}")
+    return roots
 
 
 def _output_bucket(package_name):
@@ -330,28 +368,32 @@ def _output_bucket(package_name):
     return ["Plugins", root], False
 
 
-def export_all_blueprint_docs(output_dir=None, content_path=None):
+def export_all_blueprint_docs(output_dir=None, scan_roots=None, exclude_plugins=None):
     """
-    Find every Blueprint asset (project + plugins) and export its graphs to markdown.
+    Find every Blueprint asset under scan_roots and export its graphs to markdown.
 
-    content_path: restrict the scan to one mount point (e.g. "/Game" or "/Combat").
-                  Defaults to None, which scans everything (project + all plugins).
+    scan_roots: list of content mount points to scan (e.g. ["/Game/ColossusRising", "/Combat"]).
+                Defaults to None, which scans this project's own content
+                (_PROJECT_CONTENT_ROOT) plus every plugin under this project's Plugins/ folder,
+                excluding vendor plugins (see _DEFAULT_EXCLUDED_PLUGINS / exclude_plugins).
     """
     if output_dir is None:
         output_dir = os.path.join(_project_root(), "Documentation", "generated-api", "content")
 
+    if scan_roots is None:
+        scan_roots = [_PROJECT_CONTENT_ROOT] + _discover_plugin_scan_roots(exclude_plugins)
+
     asset_registry = unreal.AssetRegistryHelpers.get_asset_registry()
     editor_asset_subsystem = unreal.get_editor_subsystem(unreal.EditorAssetSubsystem)
 
-    filter_kwargs = {
-        "class_paths": [unreal.TopLevelAssetPath("/Script/Engine", "Blueprint")],
-        "recursive_classes": True,
-    }
-    if content_path:
-        filter_kwargs["package_paths"] = [content_path]
-        filter_kwargs["recursive_paths"] = True
-
-    assets = asset_registry.get_assets(unreal.ARFilter(**filter_kwargs))
+    ar_filter = unreal.ARFilter(
+        class_paths=[unreal.TopLevelAssetPath("/Script/Engine", "Blueprint")],
+        recursive_classes=True,
+        package_paths=scan_roots,
+        recursive_paths=True,
+    )
+    assets = asset_registry.get_assets(ar_filter)
+    unreal.log(f"[BlueprintGraphDocs] Scanning {scan_roots}")
     unreal.log(f"[BlueprintGraphDocs] Found {len(assets)} Blueprint asset(s).")
 
     written = 0
@@ -377,11 +419,11 @@ def export_all_blueprint_docs(output_dir=None, content_path=None):
 
         parent_class_name = ""
         try:
-            generated_class = bp.get_editor_property("generated_class")
-            parent = generated_class.get_super_class() if generated_class else None
-            parent_class_name = parent.get_name() if parent else ""
-        except Exception:
-            pass
+            generated_class = unreal.EditorAssetLibrary.load_blueprint_class(package_name)
+            super_class = generated_class.get_super_class() if generated_class else None
+            parent_class_name = super_class.get_name() if super_class else ""
+        except Exception as e:
+            unreal.log_warning(f"[BlueprintGraphDocs] Could not resolve parent class for {package_name}: {e}")
 
         markdown = generate_blueprint_markdown(asset_name, package_name, parent_class_name, graph_texts)
 
