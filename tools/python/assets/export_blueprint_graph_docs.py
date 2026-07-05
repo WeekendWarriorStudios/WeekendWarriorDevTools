@@ -440,11 +440,10 @@ def export_all_blueprint_docs(output_dir=None, scan_roots=None, exclude_plugins=
 
         parent_class_name = ""
         try:
-            generated_class = unreal.EditorAssetLibrary.load_blueprint_class(package_name)
-            super_class = generated_class.get_super_class() if generated_class else None
-            parent_class_name = super_class.get_name() if super_class else ""
-        except Exception as e:
-            unreal.log_warning(f"[BlueprintGraphDocs] Could not resolve parent class for {package_name}: {e}")
+            parent_class = bp.get_editor_property("parent_class")
+            parent_class_name = parent_class.get_name() if parent_class else ""
+        except Exception:
+            pass
 
         markdown = generate_blueprint_markdown(asset_name, package_name, parent_class_name, graph_texts)
 
