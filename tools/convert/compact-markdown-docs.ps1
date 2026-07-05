@@ -16,7 +16,9 @@
     multiple chunks instead of one file, each kept under the cap: "<LeafDirName>_1.md",
     "<LeafDirName>_2.md", etc. A folder that fits in one chunk keeps the plain
     "<LeafDirName>.md" name (no numeric suffix). A single source file that alone exceeds the cap
-    still becomes its own (oversized) chunk rather than being split mid-file.
+    is itself split along its own top-level "---" section rules (e.g. the per-graph sections in
+    one Blueprint's export) before chunking, so even one huge asset doesn't blow past the cap;
+    only a section that still can't be split further becomes its own oversized chunk.
 
     Intended as a post-processing pass over doc trees like the one convert-cpp-to-markdown.ps1
     produces (Documentation\generated-api\source and \content), where one file per class/asset
@@ -72,6 +74,43 @@ function Find-ProjectRoot([string]$StartDir) {
 function Get-WordCount([string]$Text) {
     if (-not $Text) { return 0 }
     return (@($Text -split '\s+' | Where-Object { $_ })).Count
+}
+
+# A single source file can itself be too large for MaxWords (e.g. one Blueprint with hundreds of
+# internal graphs). Rather than accept it whole as one oversized chunk, split it along its own
+# top-level "---" section rules (the same separator these generators already put between graphs/
+# entries), recursing in case a single section is still too big on its own. Each PSCustomObject
+# emitted here is a plain (non-enumerable) object, so - unlike Group-IntoChunks below - this can
+# safely emit results one at a time through the normal output stream without any pipeline-
+# flattening risk; callers just `foreach` over however many pieces come back.
+function Split-OversizedEntry([PSCustomObject]$Entry, [int]$MaxWords) {
+    if ($Entry.Words -le $MaxWords) {
+        $Entry
+        return
+    }
+
+    $rawParts = @($Entry.Content -split '(?m)^---\s*$')
+    if ($rawParts.Count -le 1) {
+        # No further natural split point - accept it as an oversized leaf.
+        $Entry
+        return
+    }
+
+    for ($i = 0; $i -lt $rawParts.Count; $i++) {
+        $partContent = $rawParts[$i].Trim()
+        if (-not $partContent) { continue }
+
+        $headingLine = @($partContent -split "`r?`n" | Where-Object { $_.Trim() -match '^#+\s*\S' }) | Select-Object -First 1
+        $label = if ($headingLine) { ($headingLine.Trim() -replace '^#+\s*', '') } else { "section $($i + 1)" }
+
+        $subEntry = [PSCustomObject]@{
+            Name    = "$($Entry.Name) - $label"
+            Content = $partContent
+            Words   = Get-WordCount $partContent
+        }
+
+        Split-OversizedEntry $subEntry $MaxWords
+    }
 }
 
 # Packs pre-read file entries (Name/Content/Words) into word-count-capped chunks. A single entry
@@ -166,11 +205,14 @@ foreach ($dir in $leafDirs) {
     $entries = [System.Collections.Generic.List[PSCustomObject]]::new()
     foreach ($f in $mdFiles) {
         $content = (Get-Content -LiteralPath $f.FullName -Raw -Encoding UTF8).TrimEnd()
-        $entries.Add([PSCustomObject]@{
+        $rawEntry = [PSCustomObject]@{
             Name    = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
             Content = $content
             Words   = Get-WordCount $content
-        }) | Out-Null
+        }
+        foreach ($piece in (Split-OversizedEntry $rawEntry $MaxWordsPerFile)) {
+            $entries.Add($piece) | Out-Null
+        }
     }
 
     $chunks = Group-IntoChunks $entries $MaxWordsPerFile
