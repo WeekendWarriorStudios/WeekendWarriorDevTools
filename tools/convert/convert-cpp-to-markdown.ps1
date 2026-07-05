@@ -694,7 +694,7 @@ if ($ScanAll) {
 
     # Output directory
     if (-not $OutputDir) {
-        $OutputDir = Join-Path $ProjectRoot "Documentation\generated-api"
+        $OutputDir = Join-Path $ProjectRoot "Documentation\generated-api\source"
     }
     Write-Host "Output dir   : $OutputDir`n" -ForegroundColor Cyan
 
