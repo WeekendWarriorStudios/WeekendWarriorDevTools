@@ -1,0 +1,38 @@
+﻿{
+    "runAt":  "2026-06-27T16:00:05.1687983-07:00",
+    "repository":  "A:\\Projects\\ColossusRising\\WeekendWarriorDevTools",
+    "options":  {
+                    "IncludePlugins":  true,
+                    "IncludeEngine":  false,
+                    "ForceTracked":  false,
+                    "DryRun":  false,
+                    "IgnoreLastRun":  false
+                },
+    "targets":  [
+                    "Binaries",
+                    "Intermediate",
+                    "DerivedDataCache"
+                ],
+    "removed":  [
+
+                ],
+    "removedCount":  0,
+    "skipped":  [
+
+                ],
+    "skippedCount":  0,
+    "errors":  [
+
+               ],
+    "errorsCount":  0,
+    "messages":  [
+                     "[2026-06-27 16:00:05] Cleanup started",
+                     "[2026-06-27 16:00:05] Repository root: A:\\Projects\\ColossusRising\\WeekendWarriorDevTools",
+                     "[2026-06-27 16:00:05] Options: IncludePlugins=True IncludeEngine=False ForceTracked=False DryRun=False",
+                     "[2026-06-27 16:00:05] No Plugins folder found at A:\\Projects\\ColossusRising\\WeekendWarriorDevTools\\Plugins",
+                     "[2026-06-27 16:00:05] Summary: Removed=0 Skipped=0 Errors=0",
+                     "[2026-06-27 16:00:05] Cleanup finished"
+                 ],
+    "messagesCount":  6,
+    "lastRunFile":  "A:\\Projects\\ColossusRising\\WeekendWarriorDevTools\\tools\\outputs\\.last_cleanup"
+}
