@@ -22,12 +22,21 @@ function Write-Log {
     Write-Verbose $line
 }
 
+$ScriptPath = $MyInvocation.MyCommand.Path
+$ScriptDir = Split-Path -Parent $ScriptPath
+# Tools folder (this script's own home) stays fixed regardless of which project root gets cleaned,
+# so logs/outputs always land next to the tool rather than inside whatever -Root is passed.
+$ToolsDir = Split-Path -Parent $ScriptDir
+
 try {
     if ([string]::IsNullOrWhiteSpace($Root)) {
-        $ScriptPath = $MyInvocation.MyCommand.Path
-        $ScriptDir = Split-Path -Parent $ScriptPath
-        $RepoRoot = Resolve-Path -Path (Join-Path $ScriptDir '..\..') -ErrorAction Stop
+        $RepoRoot = Resolve-Path -Path (Join-Path $ScriptDir '..\..\..') -ErrorAction Stop
         $RepoRoot = $RepoRoot.Path
+        # Fallback for submodule nesting: if no .uproject found, try one level up
+        $uprojectCheck = Get-ChildItem -LiteralPath $RepoRoot -Filter '*.uproject' -File -ErrorAction SilentlyContinue
+        if (-not $uprojectCheck) {
+            $RepoRoot = Split-Path -Parent $RepoRoot
+        }
     } else {
         $RepoRoot = Resolve-Path -Path $Root -ErrorAction Stop
         $RepoRoot = $RepoRoot.Path
@@ -39,11 +48,11 @@ try {
 
 
 # Use a single JSON summary file in tools/outputs instead of a separate CleanupLogs folder
-$outputsDir = Join-Path $RepoRoot 'tools\outputs'
+$outputsDir = Join-Path $ToolsDir 'outputs'
 if (-not (Test-Path -LiteralPath $outputsDir)) { New-Item -ItemType Directory -Path $outputsDir -Force | Out-Null }
 
 # If an old CleanupLogs folder exists, try to merge its summary then remove the folder
-$oldLogDir = Join-Path $RepoRoot 'tools\CleanupLogs'
+$oldLogDir = Join-Path $ToolsDir 'CleanupLogs'
 if (Test-Path -LiteralPath $oldLogDir) {
     $oldSummary = Join-Path $oldLogDir 'cleanup-summary.json'
     if (Test-Path -LiteralPath $oldSummary) {
