@@ -3,28 +3,68 @@
     [string]$OutputPath = ''
 )
 
-if (-not $EngineRoot) {
-    # Try to auto-detect common UE5 locations
-    $possibleEngines = @(
-        'C:\Program Files\Epic Games\UE_5.7\Engine',
-        'C:\Program Files (x86)\Epic Games\UE_5.7\Engine',
-        'D:\Epic Games\UE_5.7\Engine',
-        'E:\Epic Games\UE_5.7\Engine',
-        'A:\GE\UE_5.7\Engine'
-    )
-
-    foreach ($path in $possibleEngines) {
-        if (Test-Path $path) {
-            $EngineRoot = $path
-            break
-        }
+if ($EngineRoot) {
+    # Accept either the install root (A:\GE\UE_5.8) or the Engine folder inside it.
+    $EngineRoot = $EngineRoot.TrimEnd('\', '/')
+    if ((Split-Path -Leaf $EngineRoot) -ne 'Engine') {
+        $EngineRoot = Join-Path $EngineRoot 'Engine'
     }
 
-    if (-not $EngineRoot) {
-        Write-Error "Engine root not found. Tried: $($possibleEngines -join ', '). Please specify -EngineRoot parameter."
+    if (-not (Test-Path -LiteralPath $EngineRoot)) {
+        Write-Error "Engine root not found at $EngineRoot."
         exit 1
     }
 }
+else {
+    # Scan the install locations for any UE_* engine rather than pinning a version,
+    # so this keeps working across engine upgrades.
+    $engineSearchRoots = @(
+        'A:\GE',
+        'C:\Program Files\Epic Games',
+        'C:\Program Files (x86)\Epic Games',
+        'D:\Epic Games',
+        'E:\Epic Games'
+    )
+
+    $installs = foreach ($searchRoot in $engineSearchRoots) {
+        if (-not (Test-Path -LiteralPath $searchRoot)) { continue }
+        foreach ($candidate in Get-ChildItem -LiteralPath $searchRoot -Directory -Filter 'UE_*' -ErrorAction SilentlyContinue) {
+            if (-not (Test-Path -LiteralPath (Join-Path $candidate.FullName 'Engine'))) { continue }
+            if ($candidate.Name -notmatch '(\d+)\.(\d+)') { continue }
+
+            [pscustomobject]@{
+                EngineRoot = Join-Path $candidate.FullName 'Engine'
+                Version    = "$($Matches[1]).$($Matches[2])"
+            }
+        }
+    }
+    $installs = @($installs)
+
+    if (-not $installs) {
+        Write-Error "No UE_* engine install found under: $($engineSearchRoots -join ', '). Please specify -EngineRoot parameter."
+        exit 1
+    }
+
+    # Prefer the version this project is associated with; otherwise take the newest.
+    $association = $null
+    $uproject = Get-ChildItem -LiteralPath (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))) -Filter *.uproject -File -ErrorAction SilentlyContinue |
+        Select-Object -First 1
+    if ($uproject) {
+        $association = (Get-Content -LiteralPath $uproject.FullName -Raw | ConvertFrom-Json).EngineAssociation
+    }
+
+    $selected = $null
+    if ($association -match '^(\d+)\.(\d+)') {
+        $selected = $installs | Where-Object { $_.Version -eq "$($Matches[1]).$($Matches[2])" } | Select-Object -First 1
+    }
+    if (-not $selected) {
+        $selected = $installs | Sort-Object { [version]$_.Version } -Descending | Select-Object -First 1
+    }
+
+    $EngineRoot = $selected.EngineRoot
+}
+
+Write-Host "Using engine root: $EngineRoot"
 
 if (-not $OutputPath) {
     $outDir = Join-Path $PSScriptRoot 'outputs'
@@ -52,7 +92,7 @@ $manifestFiles = Get-ChildItem -Path $EngineRoot -Recurse -Filter *.uplugin -Fil
 $plugins = foreach ($file in $manifestFiles) {
     $manifest = Get-Content -LiteralPath $file.FullName -Raw | ConvertFrom-LenientJson
 
-    $relativePath = $file.FullName.Substring($EngineRoot.Length + 1).Replace('\', '/')
+    $relativePath = $file.FullName.Substring($EngineRoot.Length).TrimStart('\', '/').Replace('\', '/')
     $folderPath = [System.IO.Path]::GetDirectoryName($relativePath).Replace('\', '/')
     $segments = @()
     if ($folderPath) {
