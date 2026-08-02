@@ -1,0 +1,372 @@
+﻿{
+    "generated":  "2026-08-02T14:01:04-07:00",
+    "projectFile":  "CollateralDamage.uproject",
+    "summary":  {
+                    "gameFeatures":  0,
+                    "projectPlugins":  24,
+                    "enginePlugins":  22,
+                    "contentPacks":  0
+                },
+    "gameFeatures":  [
+
+                     ],
+    "projectPlugins":  [
+                           {
+                               "name":  "AsyncLoadingScreen",
+                               "enabled":  true,
+                               "path":  "Plugins/AsyncLoadingScreen",
+                               "friendlyName":  "Async Loading Screen",
+                               "version":  "1.7.0",
+                               "description":  "Allows you to configure a Loading Screen system in the project settings easily and automatically add a Loading Screen in your game whenever you open a new level.",
+                               "category":  "Loading Screen",
+                               "createdBy":  "Truong Bui",
+                               "marketplaceUrl":  "com.epicgames.launcher://ue/marketplace/product/01f39767dc6b4290877f38365787cbf8"
+                           },
+                           {
+                               "name":  "AtmosphereWeather",
+                               "enabled":  true,
+                               "path":  "Plugins/GameFeatures/AtmosphereWeather",
+                               "friendlyName":  "AtmosphereWeather",
+                               "version":  "0.1",
+                               "description":  "Networked weather states and volumetric smoke/fire that alter visibility identically for every player. WWS-ATM.",
+                               "category":  "Collateral Damage|Systems",
+                               "createdBy":  "Weekend Warrior Studios",
+                               "marketplaceUrl":  null
+                           },
+                           {
+                               "name":  "CoreFramework",
+                               "enabled":  true,
+                               "path":  "Plugins/GameFeatures/CoreFramework",
+                               "friendlyName":  "CoreFramework",
+                               "version":  "0.1",
+                               "description":  "Lyra-derived Experience/PawnData spine, base Ability Sets and Attribute Sets shared by every theatre. WWS-CORE.",
+                               "category":  "Collateral Damage|Systems",
+                               "createdBy":  "Weekend Warrior Studios",
+                               "marketplaceUrl":  null
+                           },
+                           {
+                               "name":  "DestructionEnvironment",
+                               "enabled":  true,
+                               "path":  "Plugins/GameFeatures/DestructionEnvironment",
+                               "friendlyName":  "DestructionEnvironment",
+                               "version":  "0.1",
+                               "description":  "Voxel-driven destructible terrain and structures; cover degrades permanently under combined-arms fire. WWS-DEST.",
+                               "category":  "Collateral Damage|Systems",
+                               "createdBy":  "Weekend Warrior Studios",
+                               "marketplaceUrl":  null
+                           },
+                           {
+                               "name":  "EOSIntegrationKit",
+                               "enabled":  true,
+                               "path":  "Plugins/EOSIntegrationKit57",
+                               "friendlyName":  "EOS Integration Kit",
+                               "version":  "4.85",
+                               "description":  "EIK (Epic Online Services Integration Kit) is a plugin that enables seamless integration between Epic Online Services (EOS) and Unreal Engine. The plugin provides access to the EOS SDK (Software Development Kit) within Unreal Engine, allowing developers to easily implement features such as matchmaking, achievements, leaderboards, and more.",
+                               "category":  "Betide Studio",
+                               "createdBy":  "Betide Studio",
+                               "marketplaceUrl":  "com.epicgames.launcher://ue/marketplace/product/dba0aa05bdd144e69405653a387ad63e"
+                           },
+                           {
+                               "name":  "GameModes",
+                               "enabled":  true,
+                               "path":  "Plugins/GameFeatures/GameModes",
+                               "friendlyName":  "GameModes",
+                               "version":  "0.1",
+                               "description":  "Scale tiers, PvP/PvE/PvPvE composition, and seven objective modes as reusable data. WWS-MODE.",
+                               "category":  "Collateral Damage|Systems",
+                               "createdBy":  "Weekend Warrior Studios",
+                               "marketplaceUrl":  null
+                           },
+                           {
+                               "name":  "GASPALS",
+                               "enabled":  true,
+                               "path":  "Plugins/GASPALS/Plugins/GASPALS",
+                               "friendlyName":  "GASPALS",
+                               "version":  "1.0",
+                               "description":  "Game Animation Sample with ALS Overlays",
+                               "category":  "Locomotion",
+                               "createdBy":  "Polygon Hive",
+                               "marketplaceUrl":  null
+                           },
+                           {
+                               "name":  "MovementLocomotion",
+                               "enabled":  true,
+                               "path":  "Plugins/GameFeatures/MovementLocomotion",
+                               "friendlyName":  "MovementLocomotion",
+                               "version":  "0.1",
+                               "description":  "Momentum-based, mass-governed locomotion feeding stability data to weapon sway. WWS-MOVE.",
+                               "category":  "Collateral Damage|Systems",
+                               "createdBy":  "Weekend Warrior Studios",
+                               "marketplaceUrl":  null
+                           },
+                           {
+                               "name":  "NetworkingSessions",
+                               "enabled":  true,
+                               "path":  "Plugins/GameFeatures/NetworkingSessions",
+                               "friendlyName":  "NetworkingSessions",
+                               "version":  "0.1",
+                               "description":  "EOS-backed session, matchmaking, and the server-authoritative replication backbone for 64-player matches. WWS-NET.",
+                               "category":  "Collateral Damage|Systems",
+                               "createdBy":  "Weekend Warrior Studios",
+                               "marketplaceUrl":  null
+                           },
+                           {
+                               "name":  "PCGExtendedToolkit",
+                               "enabled":  true,
+                               "path":  "Plugins/PCGExtendedToolkit",
+                               "friendlyName":  "PCGEx",
+                               "version":  "0.77.3",
+                               "description":  "A rather large toolset that expand on existing PCG capabilities in unique ways.",
+                               "category":  "PCG",
+                               "createdBy":  "TimothÃ© Lapetite",
+                               "marketplaceUrl":  null
+                           },
+                           {
+                               "name":  "PresentationUIAudio",
+                               "enabled":  true,
+                               "path":  "Plugins/GameFeatures/PresentationUIAudio",
+                               "friendlyName":  "PresentationUIAudio",
+                               "version":  "0.1",
+                               "description":  "Sparse CommonUI HUD and positional, occluded ballistic audio. Reinforces simulation, never replaces it. WWS-UI.",
+                               "category":  "Collateral Damage|Systems",
+                               "createdBy":  "Weekend Warrior Studios",
+                               "marketplaceUrl":  null
+                           },
+                           {
+                               "name":  "StudioMCPTools",
+                               "enabled":  true,
+                               "path":  "Plugins/studio-mcp-tools",
+                               "friendlyName":  "Studio MCP Tools",
+                               "version":  "0.1",
+                               "description":  "Editor-only MCP toolset exposing asset/content authoring to AI agents via the ToolsetRegistry/ModelContextProtocol bridge: Voxel Plugin 2 (graphs, layers, mega materials, surface types, texture arrays), PCG/PCGEx graph construction (nodes, edges, settings), and generic level actor/component spawning plus material instance authoring (used for content-only systems like Fluid Ninja LIVE).",
+                               "category":  "Studio Tools",
+                               "createdBy":  "Weekend Warrior Studios",
+                               "marketplaceUrl":  null
+                           },
+                           {
+                               "name":  "Theater_BoerWar_Boer",
+                               "enabled":  true,
+                               "path":  "Plugins/GameFeatures/Theaters/Theater_BoerWar_Boer",
+                               "friendlyName":  "Theater_BoerWar_Boer",
+                               "version":  "0.1",
+                               "description":  "Act I content: Boer commandos, Second Boer War (1899-1902). Magersfontein, Spion Kop, Paardeberg, Mafeking. Data-only.",
+                               "category":  "Collateral Damage|Theaters",
+                               "createdBy":  "Weekend Warrior Studios",
+                               "marketplaceUrl":  null
+                           },
+                           {
+                               "name":  "Theater_BoerWar_British",
+                               "enabled":  true,
+                               "path":  "Plugins/GameFeatures/Theaters/Theater_BoerWar_British",
+                               "friendlyName":  "Theater_BoerWar_British",
+                               "version":  "0.1",
+                               "description":  "Act I content: British forces, Second Boer War (1899-1902). Magersfontein, Spion Kop, Paardeberg, Mafeking. Data-only.",
+                               "category":  "Collateral Damage|Theaters",
+                               "createdBy":  "Weekend Warrior Studios",
+                               "marketplaceUrl":  null
+                           },
+                           {
+                               "name":  "Theater_RussianCivilWar_Polish",
+                               "enabled":  true,
+                               "path":  "Plugins/GameFeatures/Theaters/Theater_RussianCivilWar_Polish",
+                               "friendlyName":  "Theater_RussianCivilWar_Polish",
+                               "version":  "0.1",
+                               "description":  "Act IV content: Polish forces, Polish-Soviet War (1919-1921). Battle of Warsaw, the Miracle on the Vistula. Data-only.",
+                               "category":  "Collateral Damage|Theaters",
+                               "createdBy":  "Weekend Warrior Studios",
+                               "marketplaceUrl":  null
+                           },
+                           {
+                               "name":  "Theater_RussianCivilWar_Red",
+                               "enabled":  true,
+                               "path":  "Plugins/GameFeatures/Theaters/Theater_RussianCivilWar_Red",
+                               "friendlyName":  "Theater_RussianCivilWar_Red",
+                               "version":  "0.1",
+                               "description":  "Act IV content: Red Army and Red Guard partisans, Russian Civil War (1917-1922). Ice March, Tsaritsyn, Perekop. Data-only.",
+                               "category":  "Collateral Damage|Theaters",
+                               "createdBy":  "Weekend Warrior Studios",
+                               "marketplaceUrl":  null
+                           },
+                           {
+                               "name":  "Theater_RussianCivilWar_White",
+                               "enabled":  true,
+                               "path":  "Plugins/GameFeatures/Theaters/Theater_RussianCivilWar_White",
+                               "friendlyName":  "Theater_RussianCivilWar_White",
+                               "version":  "0.1",
+                               "description":  "Act IV content: White Volunteer Army and shock troops, Russian Civil War (1917-1922). Ice March, Tsaritsyn, Perekop. Data-only.",
+                               "category":  "Collateral Damage|Theaters",
+                               "createdBy":  "Weekend Warrior Studios",
+                               "marketplaceUrl":  null
+                           },
+                           {
+                               "name":  "Theater_RussoJapanese_Japan",
+                               "enabled":  true,
+                               "path":  "Plugins/GameFeatures/Theaters/Theater_RussoJapanese_Japan",
+                               "friendlyName":  "Theater_RussoJapanese_Japan",
+                               "version":  "0.1",
+                               "description":  "Act II content: Imperial Japanese forces, Russo-Japanese War (1904-1905). Nanshan, Yalu River, 203 Meter Hill, Mukden. Data-only.",
+                               "category":  "Collateral Damage|Theaters",
+                               "createdBy":  "Weekend Warrior Studios",
+                               "marketplaceUrl":  null
+                           },
+                           {
+                               "name":  "Theater_RussoJapanese_Russia",
+                               "enabled":  true,
+                               "path":  "Plugins/GameFeatures/Theaters/Theater_RussoJapanese_Russia",
+                               "friendlyName":  "Theater_RussoJapanese_Russia",
+                               "version":  "0.1",
+                               "description":  "Act II content: Imperial Russian forces, Russo-Japanese War (1904-1905). Nanshan, Yalu River, 203 Meter Hill, Mukden. Data-only.",
+                               "category":  "Collateral Damage|Theaters",
+                               "createdBy":  "Weekend Warrior Studios",
+                               "marketplaceUrl":  null
+                           },
+                           {
+                               "name":  "Theater_WWI_CentralPowers",
+                               "enabled":  true,
+                               "path":  "Plugins/GameFeatures/Theaters/Theater_WWI_CentralPowers",
+                               "friendlyName":  "Theater_WWI_CentralPowers",
+                               "version":  "0.1",
+                               "description":  "Act III content: Central Powers forces, World War I (1914-1918). Osowiec, Verdun, Somme/Flers-Courcelette, Passchendaele. Data-only.",
+                               "category":  "Collateral Damage|Theaters",
+                               "createdBy":  "Weekend Warrior Studios",
+                               "marketplaceUrl":  null
+                           },
+                           {
+                               "name":  "Theater_WWI_Entente",
+                               "enabled":  true,
+                               "path":  "Plugins/GameFeatures/Theaters/Theater_WWI_Entente",
+                               "friendlyName":  "Theater_WWI_Entente",
+                               "version":  "0.1",
+                               "description":  "Act III content: Entente forces, World War I (1914-1918). Osowiec, Verdun, Somme/Flers-Courcelette, Passchendaele. Data-only.",
+                               "category":  "Collateral Damage|Theaters",
+                               "createdBy":  "Weekend Warrior Studios",
+                               "marketplaceUrl":  null
+                           },
+                           {
+                               "name":  "ThreepeatAnimTools",
+                               "enabled":  true,
+                               "path":  "Plugins/ThreepeatAnimTools",
+                               "friendlyName":  "Threepeat Anim Tools (Tatools)",
+                               "version":  "1.0",
+                               "description":  null,
+                               "category":  "Other",
+                               "createdBy":  "Threepeat Games",
+                               "marketplaceUrl":  "com.epicgames.launcher://ue/Fab/product/576ae5f6-df60-42cc-b0e7-5681beb6d585"
+                           },
+                           {
+                               "name":  "VehiclesCombinedArms",
+                               "enabled":  true,
+                               "path":  "Plugins/GameFeatures/VehiclesCombinedArms",
+                               "friendlyName":  "VehiclesCombinedArms",
+                               "version":  "0.1",
+                               "description":  "Chaos Vehicles pawns, crew seat roles, and armor penetration modeling at 64-player scale. WWS-VEH.",
+                               "category":  "Collateral Damage|Systems",
+                               "createdBy":  "Weekend Warrior Studios",
+                               "marketplaceUrl":  null
+                           },
+                           {
+                               "name":  "WeaponsFreeAim",
+                               "enabled":  true,
+                               "path":  "Plugins/GameFeatures/WeaponsFreeAim",
+                               "friendlyName":  "WeaponsFreeAim",
+                               "version":  "0.1",
+                               "description":  "Deadzone-driven weapon sweeping, recoil and sway, ballistics, and physical barrel collision. WWS-WPN.",
+                               "category":  "Collateral Damage|Systems",
+                               "createdBy":  "Weekend Warrior Studios",
+                               "marketplaceUrl":  null
+                           }
+                       ],
+    "enginePlugins":  [
+                          {
+                              "name":  "ChaosModularVehicle",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "ChaosMover",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "ChaosNiagara",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "ChaosVehiclesPlugin",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "Chooser",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "CommonUI",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "DLSS",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "DLSSMoviePipelineSupport",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "GameFeatures",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "GameplayAbilities",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "GameplayStateTree",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "ModelingToolsEditorMode",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "ModularGameplay",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "MotionWarping",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "Mover",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "NIS",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "PoseSearch",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "StreamlineCore",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "StreamlineDeepDVC",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "StreamlineDLSSG",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "StreamlineReflex",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "Voxel",
+                              "enabled":  true
+                          }
+                      ],
+    "contentPacks":  [
+
+                     ]
+}
