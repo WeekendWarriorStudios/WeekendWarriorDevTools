@@ -241,7 +241,7 @@ ROSTER = [
     },
     {
         "asset": "DA_GameMode_CaptureTheFlag",
-        "tag": "UI.Selection.GameMode.CaptureTheFlag",
+        "tag": "UI.Selection.GameMode.Arcade.CaptureTheFlag",
         "display": "CAPTURE THE FLAG",
         "parts": {PART_I: "COLOURS"},
         "description": "Take theirs, hold yours, and run the whole way back.",
@@ -259,7 +259,7 @@ ROSTER = [
     # ---- Small-scale & arcade -----------------------------------------------
     {
         "asset": "DA_GameMode_Gauntlet",
-        "tag": "UI.Selection.GameMode.Gauntlet",
+        "tag": "UI.Selection.GameMode.Arcade.Gauntlet",
         "display": "GAUNTLET",
         "parts": {},
         "description": "The small-scale arena. Pick your squad size and your base mode.",
@@ -276,7 +276,7 @@ ROSTER = [
     },
     {
         "asset": "DA_GameMode_Gauntlet_Solos",
-        "tag": "UI.Selection.GameMode.Gauntlet.Solos",
+        "tag": "UI.Selection.GameMode.Arcade.Gauntlet.Solos",
         "display": "GAUNTLET - SOLOS",
         "parts": {},
         "description": "Pure 1v1. Nowhere to hide and nobody to blame.",
@@ -293,7 +293,7 @@ ROSTER = [
     },
     {
         "asset": "DA_GameMode_Gauntlet_Duos",
-        "tag": "UI.Selection.GameMode.Gauntlet.Duos",
+        "tag": "UI.Selection.GameMode.Arcade.Gauntlet.Duos",
         "display": "GAUNTLET - DUOS",
         "parts": {},
         "description": "2v2. One partner, one plan, no margin.",
@@ -310,7 +310,7 @@ ROSTER = [
     },
     {
         "asset": "DA_GameMode_Gauntlet_Trios",
-        "tag": "UI.Selection.GameMode.Gauntlet.Trios",
+        "tag": "UI.Selection.GameMode.Arcade.Gauntlet.Trios",
         "display": "GAUNTLET - TRIOS",
         "parts": {},
         "description": "3v3. Enough men to hold an angle, not enough to hold two.",
@@ -327,7 +327,7 @@ ROSTER = [
     },
     {
         "asset": "DA_GameMode_Gauntlet_Squads",
-        "tag": "UI.Selection.GameMode.Gauntlet.Squads",
+        "tag": "UI.Selection.GameMode.Arcade.Gauntlet.Squads",
         "display": "GAUNTLET - SQUADS",
         "parts": {},
         "description": "4v4. A full section, and room to actually manoeuvre it.",
@@ -344,7 +344,7 @@ ROSTER = [
     },
     {
         "asset": "DA_GameMode_GunGame",
-        "tag": "UI.Selection.GameMode.GunGame",
+        "tag": "UI.Selection.GameMode.Arcade.GunGame",
         "display": "GUN GAME",
         "parts": {PART_I: "THE ARMOURY"},
         "description": "Every kill hands you the next weapon. Finish the ladder first.",
@@ -361,7 +361,7 @@ ROSTER = [
     },
     {
         "asset": "DA_GameMode_Duel",
-        "tag": "UI.Selection.GameMode.Duel",
+        "tag": "UI.Selection.GameMode.Arcade.Duel",
         "display": "DUEL",
         "parts": {PART_I: "PISTOLS AT DAWN"},
         "description": "One round in the chamber. A kill buys the next one; miss and it is the bayonet.",
@@ -378,7 +378,7 @@ ROSTER = [
     },
     {
         "asset": "DA_GameMode_TrenchRaid",
-        "tag": "UI.Selection.GameMode.TrenchRaid",
+        "tag": "UI.Selection.GameMode.Arcade.TrenchRaid",
         "display": "TRENCH RAID",
         "parts": {PART_I: "THE SAP", PART_II: "TRENCH RAID"},
         "description": "Melee, shotguns and sidearms, in a network too tight to swing a rifle.",
@@ -395,7 +395,7 @@ ROSTER = [
     },
     {
         "asset": "DA_GameMode_GasScramble",
-        "tag": "UI.Selection.GameMode.GasScramble",
+        "tag": "UI.Selection.GameMode.Arcade.GasScramble",
         "display": "GAS SCRAMBLE",
         # No Part I name: chemical warfare at this scale is a Great War fact, so
         # Part I falls back to the generalized name rather than getting a forced one.
@@ -414,7 +414,7 @@ ROSTER = [
     },
     {
         "asset": "DA_GameMode_NoMansLand",
-        "tag": "UI.Selection.GameMode.NoMansLand",
+        "tag": "UI.Selection.GameMode.Arcade.NoMansLand",
         "display": "NO MAN'S LAND",
         "parts": {PART_I: "SHARPSHOOTERS"},
         "description": "Bolt actions, one shot, no respawns. Seven rounds decides it.",

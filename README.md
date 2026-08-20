@@ -93,6 +93,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\quality\source-code-te
 |--------|-------------|
 | `convert_docx_to_pdf.ps1` | Convert `.docx` files to PDF using Microsoft Word (COM automation) |
 | `convert_html_to_pdf.ps1` | Convert `.html` files to PDF using Microsoft Edge headless mode |
+| `convert-markdown-to-pdf.ps1` | Convert a markdown tree to PDF, mirroring its folder structure (headless Edge/Chrome via puppeteer-core). Defaults to `Documentation\generated-api\markdown` -> `...\generated-api\pdf` |
 
 ---
 
@@ -192,7 +193,8 @@ Most PowerShell scripts support:
 | UnrealBuildTool | `build/clean-and-regen.ps1` |
 | RunUAT.bat | `build/headless-cook.ps1` |
 | Microsoft Word | `convert/convert_docx_to_pdf.ps1` |
-| Microsoft Edge | `convert/convert_html_to_pdf.ps1` |
+| Microsoft Edge | `convert/convert_html_to_pdf.ps1`, `convert/convert-markdown-to-pdf.ps1` (Chrome also works) |
+| Node.js | `convert/convert_html_to_markdown.ps1`, `convert/convert-markdown-to-pdf.ps1` (npm packages auto-installed) |
 | UE5 Python Editor Script Plugin | `python/` scripts |
 
 ---
