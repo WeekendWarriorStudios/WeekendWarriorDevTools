@@ -55,7 +55,7 @@ MODE_DATA_DIR = "/GameModes/DataAssets"
 # The Part I Deploy tiles, which live in the theater plugin rather than here.
 # Wiring them is the last step: a rule set nothing references is a rule set that
 # never reaches a player.
-TILE_DIRS = ["/ThePowderKeg/UI/GameModeEntries"]
+TILE_DIRS = ["/TheBirthofModernWarfare/UI/GameModeEntries"]
 
 
 # ---------------------------------------------------------------------------
