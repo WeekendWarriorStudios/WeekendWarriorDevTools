@@ -21,13 +21,15 @@
     only a section that still can't be split further becomes its own oversized chunk.
 
     Intended as a post-processing pass over doc trees like the one convert-cpp-to-markdown.ps1
-    produces (Documentation\generated-api\source and \content), where one file per class/asset
+    produces (Documentation\generated-api\markdown\source and \content), where one file per class/asset
     is easy to generate but unwieldy to keep as thousands of loose files, and grouping by their
     natural subfolder (a UBT module, a content pack's subfolder, etc.) still isn't always small
     enough on its own for a single upload.
 
 .PARAMETER RootDir
-    Root directory to scan.  Defaults to <ProjectRoot>\Documentation\generated-api.
+    Root directory to scan.  Defaults to <ProjectRoot>\Documentation\generated-api\markdown
+    (the markdown half of the split layout; the sibling \pdf tree is generated output and must
+    not be merged).
 
 .PARAMETER MinFilesPerFolder
     Minimum file count in a leaf folder before it gets merged.  Defaults to 2 (a folder with
@@ -43,7 +45,7 @@
 
 .EXAMPLE
     .\compact-markdown-docs.ps1
-    .\compact-markdown-docs.ps1 -RootDir "Documentation\generated-api\source" -DryRun
+    .\compact-markdown-docs.ps1 -RootDir "Documentation\generated-api\markdown\source" -DryRun
     .\compact-markdown-docs.ps1 -MinFilesPerFolder 5 -MaxWordsPerFile 250000
 #>
 param(
@@ -168,7 +170,7 @@ if (-not $RootDir) {
         Write-Host "[ERROR] Could not locate .uproject. Pass -RootDir explicitly." -ForegroundColor Red
         exit 1
     }
-    $RootDir = Join-Path $projectRoot "Documentation\generated-api"
+    $RootDir = Join-Path $projectRoot "Documentation\generated-api\markdown"
 }
 
 if (-not (Test-Path $RootDir)) {

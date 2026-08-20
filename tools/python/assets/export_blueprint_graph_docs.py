@@ -19,12 +19,12 @@ Run from the Unreal Editor Python console:
     ebgd.export_all_content_docs()
 
 Output layout (default), type-first:
-    Documentation/generated-api/content/Blueprint/Project/<Name>.md
-    Documentation/generated-api/content/Blueprint/<PluginRoot>/<Name>.md
-    Documentation/generated-api/content/Graph/Project/<Name>.md
-    Documentation/generated-api/content/Graph/<PluginRoot>/<Name>.md
-    Documentation/generated-api/content/DataAsset/Project/<Name>.md
-    Documentation/generated-api/content/DataAsset/<PluginRoot>/<Name>.md
+    Documentation/generated-api/markdown/content/Blueprint/Project/<Name>.md
+    Documentation/generated-api/markdown/content/Blueprint/<PluginRoot>/<Name>.md
+    Documentation/generated-api/markdown/content/Graph/Project/<Name>.md
+    Documentation/generated-api/markdown/content/Graph/<PluginRoot>/<Name>.md
+    Documentation/generated-api/markdown/content/DataAsset/Project/<Name>.md
+    Documentation/generated-api/markdown/content/DataAsset/<PluginRoot>/<Name>.md
 
 If two assets of the same type in the same project/plugin bucket share the same asset name, the
 exporter keeps the flat layout and appends the former package subpath to only those colliding
@@ -587,7 +587,7 @@ _ADDITIONAL_GRAPH_ASSET_CLASS_PATHS = [
 # to enumerate them by name.
 _DATA_ASSET_CLASS_PATH = unreal.TopLevelAssetPath("/Script/Engine", "DataAsset")
 
-# Folder an asset_kind is written under in Documentation/generated-api/content/<type>/...
+# Folder an asset_kind is written under in Documentation/generated-api/markdown/content/<type>/...
 _TYPE_BUCKET_BY_KIND = {
     "Blueprint": "Blueprint",
     "PCGGraph": "Graph",
@@ -703,14 +703,14 @@ def _output_path_parts(type_bucket, package_name, asset_name, duplicate_counts):
 def export_all_content_docs(output_dir=None, scan_roots=None, exclude_plugins=None):
     """
     Find every authored Blueprint, PCG/Voxel graph, and Data Asset under scan_roots and export
-    it to markdown under Documentation/generated-api/content/<type>/<Project|Plugin>/<name>.md.
+    it to markdown under Documentation/generated-api/markdown/content/<type>/<Project|Plugin>/<name>.md.
 
     scan_roots: list of content mount points to scan (e.g. ["/Game", "/Combat"]).
                 Defaults to None, which scans every mounted project-content and active plugin
                 content root currently visible to the Unreal asset registry.
     """
     if output_dir is None:
-        output_dir = os.path.join(_project_root(), "Documentation", "generated-api", "content")
+        output_dir = os.path.join(_project_root(), "Documentation", "generated-api", "markdown", "content")
 
     asset_registry = unreal.AssetRegistryHelpers.get_asset_registry()
 
