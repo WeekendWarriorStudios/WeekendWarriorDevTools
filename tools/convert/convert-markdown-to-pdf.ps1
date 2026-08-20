@@ -41,6 +41,10 @@
 .PARAMETER Concurrency
     Pages printed in parallel.  Defaults to 4.
 
+.PARAMETER TimeoutMs
+    Per-file layout/print budget in milliseconds.  Defaults to 300000 (5 min), because a
+    compacted chunk of several MB prints to thousands of pages and takes minutes on its own.
+
 .PARAMETER Max
     Stop after this many files.  Useful for smoke-testing styling before a full run.
 

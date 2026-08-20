@@ -16,6 +16,7 @@
  *   --browser <path>     Chromium-based browser executable (Edge/Chrome).
  *   --css <path>         Extra stylesheet appended after the built-in print CSS.
  *   --concurrency <n>    Pages printed in parallel (default 4).
+ *   --timeout <ms>       Per-file layout/print budget (default 300000).
  *   --exclude <globs>    Comma-separated path globs to skip.
  *   --max <n>            Stop after n files (smoke tests).
  *   --force              Re-render even when the PDF is newer than the .md.
@@ -37,6 +38,7 @@ function parseArgs(argv) {
         browser: null,
         css: null,
         concurrency: 4,
+        timeout: 300000,
         exclude: [],
         max: 0,
         force: false,
@@ -51,6 +53,7 @@ function parseArgs(argv) {
             case '--browser': opts.browser = argv[++i]; break;
             case '--css': opts.css = argv[++i]; break;
             case '--concurrency': opts.concurrency = Math.max(1, parseInt(argv[++i], 10) || 1); break;
+            case '--timeout': opts.timeout = Math.max(1000, parseInt(argv[++i], 10) || 300000); break;
             case '--exclude':
                 opts.exclude = String(argv[++i] || '')
                     .split(',')
@@ -172,6 +175,7 @@ const PRINT_CSS = [
     '    line-height: 1.5;',
     '    color: #1b1f24;',
     '    background: #ffffff;',
+    '    overflow-wrap: break-word;',       // asset paths and export names have no break points
     '    -webkit-print-color-adjust: exact;',
     '    print-color-adjust: exact;',
     '}',
@@ -352,9 +356,13 @@ async function main() {
         return 1;
     }
 
+    // Compacted doc chunks reach several MB of markdown -- thousands of printed pages -- and
+    // blow straight through puppeteer's 30s defaults, so both the CDP and per-call budgets are
+    // widened to --timeout.
     const browser = await puppeteer.launch({
         executablePath: opts.browser,
         headless: true,
+        protocolTimeout: opts.timeout + 60000,
         args: ['--disable-gpu', '--no-sandbox', '--disable-dev-shm-usage'],
     });
 
@@ -377,6 +385,7 @@ async function main() {
 
     async function worker() {
         const page = await browser.newPage();
+        page.setDefaultTimeout(opts.timeout);
         try {
             for (;;) {
                 const index = nextIndex++;
@@ -389,8 +398,8 @@ async function main() {
                     const html = buildHtml(retargetMarkdownLinks(marked.parse(raw)), title, job.relative, extraCss);
 
                     fs.mkdirSync(path.dirname(job.target), { recursive: true });
-                    await page.setContent(html, { waitUntil: 'load' });
-                    await page.pdf(Object.assign({}, pdfOptions, { path: job.target }));
+                    await page.setContent(html, { waitUntil: 'load', timeout: opts.timeout });
+                    await page.pdf(Object.assign({}, pdfOptions, { path: job.target, timeout: opts.timeout }));
 
                     done++;
                     if (done % 25 === 0 || done === total) {
