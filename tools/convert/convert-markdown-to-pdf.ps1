@@ -72,6 +72,7 @@ param(
     [string]$Css = "",
     [string[]]$Exclude = @(),
     [int]$Concurrency = 4,
+    [int]$TimeoutMs = 300000,
     [int]$Max = 0,
     [switch]$Force,
     [switch]$DryRun,
@@ -168,7 +169,8 @@ Write-Host "PDF out     : $OutputDir" -ForegroundColor Cyan
 Write-Host "Browser     : $BrowserPath" -ForegroundColor Cyan
 Write-Host ""
 
-$nodeArgs = @($converterScript, $InputDir, $OutputDir, '--browser', $BrowserPath, '--concurrency', $Concurrency)
+$nodeArgs = @($converterScript, $InputDir, $OutputDir, '--browser', $BrowserPath,
+              '--concurrency', $Concurrency, '--timeout', $TimeoutMs)
 if ($Css)      { $nodeArgs += @('--css', $Css) }
 if ($Exclude)  { $nodeArgs += @('--exclude', ($Exclude -join ',')) }
 if ($Max -gt 0){ $nodeArgs += @('--max', $Max) }
