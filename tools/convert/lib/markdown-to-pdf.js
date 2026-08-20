@@ -417,9 +417,21 @@ async function main() {
     return failed ? 1 : 0;
 }
 
-main()
-    .then(function (code) { process.exit(code); })
-    .catch(function (err) {
-        console.error('[error] ' + (err && err.stack ? err.stack : err));
-        process.exit(1);
-    });
+if (require.main === module) {
+    main()
+        .then(function (code) { process.exit(code); })
+        .catch(function (err) {
+            console.error('[error] ' + (err && err.stack ? err.stack : err));
+            process.exit(1);
+        });
+}
+
+// Exported so the rendering can be exercised (or reused) without shelling out to the CLI.
+module.exports = {
+    PRINT_CSS: PRINT_CSS,
+    buildHtml: buildHtml,
+    collectMarkdown: collectMarkdown,
+    deriveTitle: deriveTitle,
+    globToRegExp: globToRegExp,
+    retargetMarkdownLinks: retargetMarkdownLinks,
+};

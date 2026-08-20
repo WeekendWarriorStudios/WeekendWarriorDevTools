@@ -175,8 +175,10 @@ if ($DryRun)   { $nodeArgs += '--dry-run' }
 $exitCode = $LASTEXITCODE
 
 if ($exitCode -eq 0) {
-    Write-Host ""
-    Write-Host "[OK] PDFs written to: $OutputDir" -ForegroundColor Green
+    if (-not $DryRun) {
+        Write-Host ""
+        Write-Host "[OK] PDFs written to: $OutputDir" -ForegroundColor Green
+    }
 } else {
     Write-Host ""
     Write-Host "[ERROR] Conversion reported failures (exit $exitCode)." -ForegroundColor Red
