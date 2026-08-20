@@ -716,17 +716,17 @@ MODE_WIRING = {
 
 def _tag_name_of(tag):
     """
-    The string form of a tag, or "" when it is unset.
+    The name of a tag, or "" when it is unset.
 
-    unreal.GameplayTag exposes no is_valid(); an unset tag stringifies to "None",
-    which is also what a tag literally named None would look like - a name the tag
-    tree does not allow, so the ambiguity is theoretical.
+    unreal.GameplayTag exposes no members of its own in Python - the struct comes
+    back with an empty property bag, so tag.tag_name, tag.to_string() and
+    tag.is_valid() all raise AttributeError. Both facts have to come from
+    UBlueprintGameplayTagLibrary instead.
     """
-    if not tag:
+    if not tag or not unreal.GameplayTagLibrary.is_gameplay_tag_valid(tag):
         return ""
 
-    name = str(tag.to_string())
-    return "" if name in ("", "None") else name
+    return str(unreal.GameplayTagLibrary.get_tag_name(tag))
 
 
 def _tag(tag_name, report):
@@ -782,9 +782,21 @@ def _apply_struct(owner, struct_property, overrides, report, context):
 
 
 def _ensure_asset(path, directory, name, asset_class, report):
+    """
+    Load the asset, or create it if it is genuinely not there.
+
+    Loading first rather than asking does_asset_exist: that goes through the
+    asset registry, and a commandlet starts before the registry has finished
+    scanning plugin content. A second run of this script then believed every
+    asset the first run wrote was missing, tried to create each one on top of a
+    package already on disk, and reported 61 "create failed" errors. load_asset
+    hits the package itself, so it answers correctly either way.
+    """
     eas = unreal.get_editor_subsystem(unreal.EditorAssetSubsystem)
-    if eas.does_asset_exist(path):
-        return eas.load_asset(path), False
+
+    existing = eas.load_asset(path)
+    if existing:
+        return existing, False
 
     asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
     created = asset_tools.create_asset(name, directory, asset_class, unreal.DataAssetFactory())
@@ -1109,8 +1121,13 @@ def _wire_tiles(dry_run, report):
             if not tile or not isinstance(tile, unreal.CDGameModeUIEntry):
                 continue
 
-            mode_tag = tile.get_editor_property("game_mode_tag")
-            tag_name = _tag_name_of(mode_tag)
+            # GameModeTag is the roster filter and SelectionTag is the enumeration
+            # key; they are the same value on a mode tile, and several Part I tiles
+            # only ever had the second one set. Falling back is what stops those
+            # tiles being silently skipped over a field nobody filled in.
+            tag_name = _tag_name_of(tile.get_editor_property("game_mode_tag"))
+            if not tag_name:
+                tag_name = _tag_name_of(tile.get_editor_property("selection_tag"))
             mode_asset = by_tag.get(tag_name)
 
             if not mode_asset:
@@ -1126,20 +1143,37 @@ def _wire_tiles(dry_run, report):
 
             rules, objectives, rewards = MODE_WIRING[mode_asset]
 
+            # Loaded objects, not SoftObjectPaths: a TSoftObjectPtr property is
+            # still typed, and Python refuses to nativize a bare path into one
+            # ("Cannot nativize 'SoftObjectPath' as 'Object'"). Handing it the
+            # object is what actually writes the soft reference. None clears it.
             tile.set_editor_property(
-                "game_mode_data", unreal.SoftObjectPath(_object_path(MODE_DATA_DIR, mode_asset)))
+                "game_mode_data", eas.load_asset(_object_path(MODE_DATA_DIR, mode_asset)))
             tile.set_editor_property(
-                "rule_set",
-                unreal.SoftObjectPath(_object_path(RULES_DIR, rules)) if rules else unreal.SoftObjectPath())
+                "rule_set", eas.load_asset(_object_path(RULES_DIR, rules)) if rules else None)
             tile.set_editor_property(
-                "reward_set",
-                unreal.SoftObjectPath(_object_path(REWARDS_DIR, rewards)) if rewards else unreal.SoftObjectPath())
+                "reward_set", eas.load_asset(_object_path(REWARDS_DIR, rewards)) if rewards else None)
             tile.set_editor_property(
                 "objectives",
-                [unreal.SoftObjectPath(_object_path(OBJECTIVES_DIR, o)) for o in objectives])
+                [eas.load_asset(_object_path(OBJECTIVES_DIR, o)) for o in objectives])
 
             eas.save_asset(tile_path)
             report["tiles"].append("{} -> {}".format(tile_path, mode_asset))
+
+
+def _scan_content(report):
+    """
+    Force the asset registry to scan the directories this script reads and writes.
+
+    A commandlet does not wait for the initial registry scan, so list_assets on a
+    plugin content directory can legitimately come back empty on a cold start.
+    Everything here is a handful of small data assets, so a synchronous scan costs
+    nothing next to being wrong about what already exists.
+    """
+    registry = unreal.AssetRegistryHelpers.get_asset_registry()
+    registry.scan_paths_synchronous(
+        [RULES_DIR, OBJECTIVES_DIR, REWARDS_DIR, MODE_DATA_DIR] + list(TILE_DIRS),
+        force_rescan=True)
 
 
 def apply(dry_run=True):
@@ -1153,6 +1187,8 @@ def apply(dry_run=True):
         "unwired_tiles": [],
         "errors": [],
     }
+
+    _scan_content(report)
 
     # Order matters: the mode data and tile passes resolve assets the first three
     # passes create, so one real run never has to be repeated to pick up its own

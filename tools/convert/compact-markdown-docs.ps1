@@ -2,8 +2,9 @@
 <#
 .SYNOPSIS
     Merges every leaf folder of loose .md files into one (or a few size-capped) sibling .md
-    file(s), to keep large generated-doc trees under a manageable file count without producing
-    single files too big to upload elsewhere (e.g. NotebookLM's per-source word-count cap).
+    file(s), then de-nests any folder left holding only a single item, to keep large
+    generated-doc trees under a manageable file count without producing single files too big to
+    upload elsewhere (e.g. NotebookLM's per-source word-count cap).
 
 .DESCRIPTION
     Walks -RootDir looking for "leaf" directories (directories with no subdirectories of their
@@ -20,11 +21,19 @@
     one Blueprint's export) before chunking, so even one huge asset doesn't blow past the cap;
     only a section that still can't be split further becomes its own oversized chunk.
 
+    After merging, a second de-nesting pass walks -RootDir bottom-up: any folder that (still, or
+    now that its own subfolders were merged/de-nested away) contains exactly one item - one file
+    or one subfolder - has that item moved up into its parent and the now-empty folder deleted.
+    This repeats up the tree, so a chain of single-item folders collapses fully in one pass. A
+    folder with more than one item is always left nested, no matter how it got there. Use
+    -SkipDenest to disable this pass and keep only the merge behavior.
+
     Intended as a post-processing pass over doc trees like the one convert-cpp-to-markdown.ps1
     produces (Documentation\generated-api\markdown\source and \content), where one file per class/asset
     is easy to generate but unwieldy to keep as thousands of loose files, and grouping by their
     natural subfolder (a UBT module, a content pack's subfolder, etc.) still isn't always small
-    enough on its own for a single upload.
+    enough on its own for a single upload. It's also common for such trees to nest a single
+    file one folder deep (e.g. "MyClass/MyClass.md") - the de-nesting pass flattens that too.
 
 .PARAMETER RootDir
     Root directory to scan.  Defaults to <ProjectRoot>\Documentation\generated-api\markdown
@@ -41,12 +50,17 @@
     per-source limit).
 
 .PARAMETER DryRun
-    List what would be merged (including chunk counts) without writing or deleting anything.
+    List what would be merged and de-nested (including chunk counts) without writing or
+    deleting anything.
+
+.PARAMETER SkipDenest
+    Skip the post-merge de-nesting pass; leave single-item folders nested.
 
 .EXAMPLE
     .\compact-markdown-docs.ps1
     .\compact-markdown-docs.ps1 -RootDir "Documentation\generated-api\markdown\source" -DryRun
     .\compact-markdown-docs.ps1 -MinFilesPerFolder 5 -MaxWordsPerFile 250000
+    .\compact-markdown-docs.ps1 -SkipDenest
 #>
 param(
     [string]$RootDir = "",
@@ -55,7 +69,9 @@ param(
 
     [int]$MaxWordsPerFile = 400000,
 
-    [switch]$DryRun
+    [switch]$DryRun,
+
+    [switch]$SkipDenest
 )
 
 Set-StrictMode -Version Latest
@@ -164,6 +180,88 @@ function New-ChunkMarkdown([string]$Title, [System.Collections.Generic.List[PSCu
     return $sb.ToString()
 }
 
+# Recursively collapses any directory under (but not including) $RootDir that ends up holding
+# exactly one item - a single file or a single subdirectory - by moving that item up into the
+# parent and deleting the now-empty directory. Recurses into subdirectories *before* checking
+# this directory's own item count, so a chain of single-item folders (A/B/C/only.md) fully
+# collapses bottom-up in one pass: C's content moves into B, which then itself holds one item
+# and moves into A, and so on. A directory holding more than one item is always left nested,
+# no matter how it got there - only the exactly-one-item case ever de-nests.
+#
+# Besides {Moved; Skipped} stats, the returned PSCustomObject tells $Dir's *caller* what $Dir
+# itself resolves to: Collapsed=$false means $Dir stands as a real directory (0, 2+ items, or a
+# would-be collision blocked its collapse); Collapsed=$true means $Dir's sole item takes $Dir's
+# place, named by ResolvedName/ResolvedIsDir. This is tracked in memory - rather than by
+# re-reading $Dir's children off disk after recursing - specifically so a DryRun preview of a
+# multi-level chain reports each level's true original source path instead of re-querying a
+# folder a real run would already have deleted by that point (DryRun never touches disk, so nothing
+# actually moves between recursive calls). On a real run this doubles as the item's current
+# actual path, since by the time a directory checks its own contents every subdirectory that was
+# going to collapse already has, for real.
+function Remove-SingleItemNesting {
+    param(
+        [Parameter(Mandatory)] [string]$Dir,
+        [Parameter(Mandatory)] [string]$RootDir,
+        [switch]$DryRun
+    )
+
+    $result = [PSCustomObject]@{
+        Moved         = 0
+        Skipped       = 0
+        Collapsed     = $false
+        ResolvedName  = $null
+        ResolvedIsDir = $false
+        SourcePath    = $null
+    }
+
+    # $Dir's contents as its parent will see them, once every subdirectory's own collapse (if
+    # any) is folded in.
+    $virtualItems = [System.Collections.Generic.List[PSCustomObject]]::new()
+    foreach ($f in @(Get-ChildItem -LiteralPath $Dir -File -ErrorAction SilentlyContinue)) {
+        $virtualItems.Add([PSCustomObject]@{ Name = $f.Name; IsDir = $false; SourcePath = $f.FullName })
+    }
+    foreach ($sub in @(Get-ChildItem -LiteralPath $Dir -Directory -ErrorAction SilentlyContinue)) {
+        $childResult = Remove-SingleItemNesting -Dir $sub.FullName -RootDir $RootDir -DryRun:$DryRun
+        $result.Moved   += $childResult.Moved
+        $result.Skipped += $childResult.Skipped
+        if ($childResult.Collapsed) {
+            $virtualItems.Add([PSCustomObject]@{ Name = $childResult.ResolvedName; IsDir = $childResult.ResolvedIsDir; SourcePath = $childResult.SourcePath })
+        } else {
+            $virtualItems.Add([PSCustomObject]@{ Name = $sub.Name; IsDir = $true; SourcePath = $sub.FullName })
+        }
+    }
+
+    # Never collapse the scan root itself - it has no meaningful "parent" to push into.
+    if ($Dir -eq $RootDir) { return $result }
+    if ($virtualItems.Count -ne 1) { return $result }
+
+    $only = $virtualItems[0]
+    $parentDir = Split-Path -Parent $Dir
+    $destination = Join-Path $parentDir $only.Name
+
+    if (Test-Path -LiteralPath $destination) {
+        Write-Host "[WARN] Skipping de-nest of $Dir; $destination already exists." -ForegroundColor Yellow
+        $result.Skipped++
+        return $result
+    }
+
+    if ($DryRun) {
+        Write-Host "[DRY RUN] Would de-nest $($only.SourcePath) -> $destination (removing $Dir)" -ForegroundColor Yellow
+    } else {
+        Move-Item -LiteralPath $only.SourcePath -Destination $destination
+        Remove-Item -LiteralPath $Dir -Recurse -Force
+        Write-Host "De-nested -> $destination" -ForegroundColor Green
+    }
+    $result.Moved++
+    $result.Collapsed     = $true
+    $result.ResolvedName  = $only.Name
+    $result.ResolvedIsDir = $only.IsDir
+    # DryRun: nothing really moved, so the item's real path is still its original one - keep
+    # reporting that all the way up the chain. Real run: it just landed at $destination for real.
+    $result.SourcePath    = if ($DryRun) { $only.SourcePath } else { $destination }
+    return $result
+}
+
 if (-not $RootDir) {
     $projectRoot = Find-ProjectRoot (Get-Location).Path
     if (-not $projectRoot) {
@@ -264,6 +362,22 @@ foreach ($dir in $leafDirs) {
 if ($DryRun) {
     Write-Host ""
     Write-Host "[DRY RUN] Would merge $qualifyingCount qualifying folder(s) (of $($leafDirs.Count) leaf folder(s))." -ForegroundColor Yellow
+}
+
+$denestResult = [PSCustomObject]@{ Moved = 0; Skipped = 0 }
+if (-not $SkipDenest) {
+    Write-Host ""
+    $denestResult = Remove-SingleItemNesting -Dir $RootDir -RootDir $RootDir -DryRun:$DryRun
+}
+
+if ($DryRun) {
+    Write-Host ""
+    if (-not $SkipDenest) {
+        Write-Host "[DRY RUN] Would de-nest $($denestResult.Moved) folder(s) down to their single remaining item." -ForegroundColor Yellow
+        if ($denestResult.Skipped -gt 0) {
+            Write-Host "[DRY RUN] $($denestResult.Skipped) folder(s) would be skipped (name collision)." -ForegroundColor Yellow
+        }
+    }
     exit 0
 }
 
@@ -275,6 +389,12 @@ if ($chunkedFolders -gt 0) {
 }
 if ($skippedExisting -gt 0) {
     Write-Host "Skipped (name collision) : $skippedExisting" -ForegroundColor Yellow
+}
+if (-not $SkipDenest) {
+    Write-Host "De-nested folders : $($denestResult.Moved)" -ForegroundColor Green
+    if ($denestResult.Skipped -gt 0) {
+        Write-Host "De-nest skipped (name collision) : $($denestResult.Skipped)" -ForegroundColor Yellow
+    }
 }
 Write-Host "Files before    : $beforeCount" -ForegroundColor Cyan
 Write-Host "Files after     : $afterCount" -ForegroundColor Cyan

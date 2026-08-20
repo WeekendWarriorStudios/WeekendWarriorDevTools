@@ -613,7 +613,9 @@ def _tag(tag_name, report=None):
     read at startup - surfaces as a reported error instead of a blank field on a saved asset.
     """
     tag = unreal.CDGameplayTagLibrary.make_tag_from_name(unreal.Name(tag_name))
-    if not tag.is_valid() and report is not None:
+    # unreal.GameplayTag has no is_valid() of its own - the struct exposes no
+    # members at all in Python - so validity has to come from the tag library.
+    if not unreal.GameplayTagLibrary.is_gameplay_tag_valid(tag) and report is not None:
         report["errors"].append(
             "tag '{}' is not registered - restart the editor if Config/Tags/Frontend.ini "
             "changed while it was open".format(tag_name))
@@ -781,7 +783,7 @@ def apply(dry_run=True):
 
         current = unreal.GameplayTagLibrary.break_gameplay_tag_container(
             asset.get_editor_property("filter_tags"))
-        names = [str(tag.to_string()) for tag in current]
+        names = [str(unreal.GameplayTagLibrary.get_tag_name(tag)) for tag in current]
         if not any(name in TAG_REMAP for name in names):
             continue
 
