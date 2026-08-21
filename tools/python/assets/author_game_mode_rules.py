@@ -10,11 +10,20 @@ player is told to do, and what it pays.
 
 It imports that script's ROSTER rather than restating it, so a mode cannot end up
 with two different scale tiers depending on which script ran last, and it creates
-any UCDGameModeData that is missing - today only DA_GameMode_PointRotation exists
-on disk, and a rule set nothing references never reaches a player. It does not
-call author_game_modes.apply(): that still writes tiles to
-/Game/CollateralDamage/UI/Data/GameModes, which is not where the Part I tiles
-live any more, so running it would create a duplicate roster.
+any UCDGameModeData that is missing - a rule set nothing references never reaches
+a player. It also calls author_game_modes.apply() implicitly by sharing its
+UI_MODE_DIR: tiles are a single global roster (one UCDGameModeUIEntry per
+mechanic, PartDisplayNameOverrides carrying each Part's themed name), not
+duplicated per Part plugin. That per-Part-plugin arrangement was tried briefly
+(the theater plugins' own Content/UI/GameModeEntries/ folders and this script's
+TILE_DIRS both pointed there for a while) and reverted 2026-08-20: SelectionTag
+is the enumeration key every tag-driven list queries on, so two Parts each
+authoring their own tile under the same UI.Selection.GameMode.* tag would enumerate
+as duplicate tiles with nothing to tell them apart, and UCDGameModeUIEntry's own
+IsDataValid never required a PartTag the way UCDMapUIEntry's does - the class was
+built for one shared tile per mechanic from the start. See the Theater I plugin's
+README ("Asset discovery") for the map/range/part tiles, which genuinely are
+per-Part and stay that way.
 
 Everything it writes lives in the GameModes plugin:
 
@@ -52,10 +61,10 @@ OBJECTIVES_DIR = "/GameModes/Objectives"
 REWARDS_DIR = "/GameModes/Rewards"
 MODE_DATA_DIR = "/GameModes/DataAssets"
 
-# The Part I Deploy tiles, which live in the theater plugin rather than here.
-# Wiring them is the last step: a rule set nothing references is a rule set that
-# never reaches a player.
-TILE_DIRS = ["/TheBirthofModernWarfare/UI/GameModeEntries"]
+# The global Deploy tile roster - see the module docstring for why this is one
+# shared directory rather than a per-Part-plugin one. Wiring them is the last
+# step: a rule set nothing references is a rule set that never reaches a player.
+TILE_DIRS = ["/Game/CollateralDamage/UI/Data/GameModes"]
 
 
 # ---------------------------------------------------------------------------
@@ -992,9 +1001,10 @@ def _load_roster(report):
     table is what keeps a mode from having two different scale tiers depending on
     which script last ran.
 
-    Only the data tables are imported; that script's apply() still writes its
-    tiles to /Game/CollateralDamage/UI/Data/GameModes, which is not where the
-    Part I tiles live any more, so calling it would create a duplicate roster.
+    Only the data tables are imported; that script's apply() writes tiles to the
+    same /Game/CollateralDamage/UI/Data/GameModes this script's TILE_DIRS reads
+    from (see the module docstring), so calling it here would just recreate the
+    tiles this script expects to already exist, not create a second roster.
     """
     try:
         import author_game_modes
