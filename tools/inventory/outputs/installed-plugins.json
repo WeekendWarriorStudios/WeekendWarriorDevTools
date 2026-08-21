@@ -1,11 +1,11 @@
 ﻿{
-    "generated":  "2026-08-02T14:01:04-07:00",
+    "generated":  "2026-08-21T16:41:57-07:00",
     "projectFile":  "CollateralDamage.uproject",
     "summary":  {
                     "gameFeatures":  0,
-                    "projectPlugins":  24,
-                    "enginePlugins":  22,
-                    "contentPacks":  0
+                    "projectPlugins":  28,
+                    "enginePlugins":  33,
+                    "contentPacks":  18
                 },
     "gameFeatures":  [
 
@@ -30,6 +30,17 @@
                                "version":  "0.1",
                                "description":  "Networked weather states and volumetric smoke/fire that alter visibility identically for every player. WWS-ATM.",
                                "category":  "Collateral Damage|Systems",
+                               "createdBy":  "Weekend Warrior Studios",
+                               "marketplaceUrl":  null
+                           },
+                           {
+                               "name":  "BoilingPoint",
+                               "enabled":  true,
+                               "path":  "Plugins/GameFeatures/Theaters/IX-TheBoilingPoint",
+                               "friendlyName":  "Theater IX - Boiling Point",
+                               "version":  "0.1",
+                               "description":  "Part IX: Boiling Point (2022-Present).",
+                               "category":  "Collateral Damage|Theaters",
                                "createdBy":  "Weekend Warrior Studios",
                                "marketplaceUrl":  null
                            },
@@ -67,12 +78,23 @@
                                "marketplaceUrl":  "com.epicgames.launcher://ue/marketplace/product/dba0aa05bdd144e69405653a387ad63e"
                            },
                            {
+                               "name":  "Frontend",
+                               "enabled":  true,
+                               "path":  "Plugins/GameFeatures/Frontend",
+                               "friendlyName":  "Frontend",
+                               "version":  "0.1",
+                               "description":  "Tag-driven CommonUI frontend: Part select, main menu, Deploy flow, Armory, Personnel, and session lobby. WWS-UI.",
+                               "category":  "Collateral Damage|Systems",
+                               "createdBy":  "Weekend Warrior Studios",
+                               "marketplaceUrl":  null
+                           },
+                           {
                                "name":  "GameModes",
                                "enabled":  true,
                                "path":  "Plugins/GameFeatures/GameModes",
                                "friendlyName":  "GameModes",
                                "version":  "0.1",
-                               "description":  "Scale tiers, PvP/PvE/PvPvE composition, and seven objective modes as reusable data. WWS-MODE.",
+                               "description":  "Scale tiers, PvP/PvE/PvPvE composition, and nineteen objective modes as reusable data, plus the two stake layers over them: wager tables (credit and patch buy-in, pot settlement, spoils draft) and the ranked ladder (invite eligibility, Elo rating, decay, leaver penalties). Mode names here are mechanic names only - the shipped, themed name is per-Part presentation on the Deploy tile. WWS-MODE.",
                                "category":  "Collateral Damage|Systems",
                                "createdBy":  "Weekend Warrior Studios",
                                "marketplaceUrl":  null
@@ -89,13 +111,57 @@
                                "marketplaceUrl":  null
                            },
                            {
+                               "name":  "GatheringStorm",
+                               "enabled":  true,
+                               "path":  "Plugins/GameFeatures/Theaters/III-GatheringStorm",
+                               "friendlyName":  "Theater III - Gathering Storm",
+                               "version":  "0.1",
+                               "description":  "Part III: Gathering Storm (1918-1938).",
+                               "category":  "Collateral Damage|Theaters",
+                               "createdBy":  "Weekend Warrior Studios",
+                               "marketplaceUrl":  null
+                           },
+                           {
+                               "name":  "GWOT",
+                               "enabled":  true,
+                               "path":  "Plugins/GameFeatures/Theaters/VIII-GWOT",
+                               "friendlyName":  "Theater VIII - GWOT",
+                               "version":  "0.1",
+                               "description":  "Part VIII: Global War on Terror (2001-2021).",
+                               "category":  "Collateral Damage|Theaters",
+                               "createdBy":  "Weekend Warrior Studios",
+                               "marketplaceUrl":  null
+                           },
+                           {
+                               "name":  "Loadout",
+                               "enabled":  true,
+                               "path":  "Plugins/GameFeatures/Loadout",
+                               "friendlyName":  "Loadout",
+                               "version":  "0.1",
+                               "description":  "Owns what a pawn carries: Primary/Secondary/Melee/Special/Tool (mutually-exclusive hands), two independent Throwable slots, the soldier\u0027s specialization class, and their equipped patches. WWS-LOAD.",
+                               "category":  "Collateral Damage|Systems",
+                               "createdBy":  "Weekend Warrior Studios",
+                               "marketplaceUrl":  null
+                           },
+                           {
                                "name":  "MovementLocomotion",
                                "enabled":  true,
                                "path":  "Plugins/GameFeatures/MovementLocomotion",
                                "friendlyName":  "MovementLocomotion",
                                "version":  "0.1",
-                               "description":  "Momentum-based, mass-governed locomotion feeding stability data to weapon sway. WWS-MOVE.",
+                               "description":  "Physics-driven locomotion on Chaos Mover. Gait, stance, traversal and constrained movement modes, gated by gameplay tags. WWS-MOVE.",
                                "category":  "Collateral Damage|Systems",
+                               "createdBy":  "Weekend Warrior Studios",
+                               "marketplaceUrl":  null
+                           },
+                           {
+                               "name":  "NarcoWars",
+                               "enabled":  true,
+                               "path":  "Plugins/GameFeatures/Theaters/VII-NarcoWars",
+                               "friendlyName":  "Theater VII - Narco Wars",
+                               "version":  "0.1",
+                               "description":  "Part VII: Narco Wars (1970s-2000s).",
+                               "category":  "Collateral Damage | Theaters",
                                "createdBy":  "Weekend Warrior Studios",
                                "marketplaceUrl":  null
                            },
@@ -133,6 +199,17 @@
                                "marketplaceUrl":  null
                            },
                            {
+                               "name":  "ShadowWars",
+                               "enabled":  true,
+                               "path":  "Plugins/GameFeatures/Theaters/VI-ShadowWars",
+                               "friendlyName":  "Theater VI - Shadow Wars",
+                               "version":  "0.1",
+                               "description":  "Part VI: Shadow Wars (1976-1991). The superpowers battle through proxies, insurgencies, espionage, and special operations.",
+                               "category":  "Collateral Damage|Theaters",
+                               "createdBy":  "Weekend Warrior Studios",
+                               "marketplaceUrl":  null
+                           },
+                           {
                                "name":  "StudioMCPTools",
                                "enabled":  true,
                                "path":  "Plugins/studio-mcp-tools",
@@ -144,100 +221,45 @@
                                "marketplaceUrl":  null
                            },
                            {
-                               "name":  "Theater_BoerWar_Boer",
+                               "name":  "TacticalRecon",
                                "enabled":  true,
-                               "path":  "Plugins/GameFeatures/Theaters/Theater_BoerWar_Boer",
-                               "friendlyName":  "Theater_BoerWar_Boer",
+                               "path":  "Plugins/GameFeatures/TacticalRecon",
+                               "friendlyName":  "TacticalRecon",
                                "version":  "0.1",
-                               "description":  "Act I content: Boer commandos, Second Boer War (1899-1902). Magersfontein, Spion Kop, Paardeberg, Mafeking. Data-only.",
+                               "description":  "Era-authentic reconnaissance, signaling and breach gadgets for 1899-1920: the observation balloon, the messenger pigeon, the war dog, the field telephone relay, the listening post, the heliograph and the wire-cutting charge, built as GF_Loadout content rather than a modern drone analog. WWS-RECON.",
+                               "category":  "Collateral Damage|Systems",
+                               "createdBy":  "Weekend Warrior Studios",
+                               "marketplaceUrl":  null
+                           },
+                           {
+                               "name":  "TheBambooCurtain",
+                               "enabled":  true,
+                               "path":  "Plugins/GameFeatures/Theaters/V-TheBambooCurtain",
+                               "friendlyName":  "Theater V - The Bamboo Curtain",
+                               "version":  "0.1",
+                               "description":  "Part V: The Bamboo Curtain (1946-1975). The Cold War comes to Asia.",
                                "category":  "Collateral Damage|Theaters",
                                "createdBy":  "Weekend Warrior Studios",
                                "marketplaceUrl":  null
                            },
                            {
-                               "name":  "Theater_BoerWar_British",
+                               "name":  "TheBirthofModernWarfare",
                                "enabled":  true,
-                               "path":  "Plugins/GameFeatures/Theaters/Theater_BoerWar_British",
-                               "friendlyName":  "Theater_BoerWar_British",
+                               "path":  "Plugins/GameFeatures/Theaters/I-TheBirthofModernWarfare",
+                               "friendlyName":  "Theater I - The Birth of Modern Warfare",
                                "version":  "0.1",
-                               "description":  "Act I content: British forces, Second Boer War (1899-1902). Magersfontein, Spion Kop, Paardeberg, Mafeking. Data-only.",
+                               "description":  "Part I: The Birth of Modern Warfare (Late 1800s-1913). The era layer covering the Spanish-American War, the Second Boer War, the Russo-Japanese War and the Balkan Wars. Content only - it ships the battles, factions, rosters and era-locked armoury for this time frame and contains no gameplay C++. Any behaviour it appears to need is a missing extension point in the systems layer beneath it. WWS-THTR.",
                                "category":  "Collateral Damage|Theaters",
                                "createdBy":  "Weekend Warrior Studios",
                                "marketplaceUrl":  null
                            },
                            {
-                               "name":  "Theater_RussianCivilWar_Polish",
+                               "name":  "TheGreatWar",
                                "enabled":  true,
-                               "path":  "Plugins/GameFeatures/Theaters/Theater_RussianCivilWar_Polish",
-                               "friendlyName":  "Theater_RussianCivilWar_Polish",
+                               "path":  "Plugins/GameFeatures/Theaters/II-TheGreatWar",
+                               "friendlyName":  "Theater II - The Great War",
                                "version":  "0.1",
-                               "description":  "Act IV content: Polish forces, Polish-Soviet War (1919-1921). Battle of Warsaw, the Miracle on the Vistula. Data-only.",
-                               "category":  "Collateral Damage|Theaters",
-                               "createdBy":  "Weekend Warrior Studios",
-                               "marketplaceUrl":  null
-                           },
-                           {
-                               "name":  "Theater_RussianCivilWar_Red",
-                               "enabled":  true,
-                               "path":  "Plugins/GameFeatures/Theaters/Theater_RussianCivilWar_Red",
-                               "friendlyName":  "Theater_RussianCivilWar_Red",
-                               "version":  "0.1",
-                               "description":  "Act IV content: Red Army and Red Guard partisans, Russian Civil War (1917-1922). Ice March, Tsaritsyn, Perekop. Data-only.",
-                               "category":  "Collateral Damage|Theaters",
-                               "createdBy":  "Weekend Warrior Studios",
-                               "marketplaceUrl":  null
-                           },
-                           {
-                               "name":  "Theater_RussianCivilWar_White",
-                               "enabled":  true,
-                               "path":  "Plugins/GameFeatures/Theaters/Theater_RussianCivilWar_White",
-                               "friendlyName":  "Theater_RussianCivilWar_White",
-                               "version":  "0.1",
-                               "description":  "Act IV content: White Volunteer Army and shock troops, Russian Civil War (1917-1922). Ice March, Tsaritsyn, Perekop. Data-only.",
-                               "category":  "Collateral Damage|Theaters",
-                               "createdBy":  "Weekend Warrior Studios",
-                               "marketplaceUrl":  null
-                           },
-                           {
-                               "name":  "Theater_RussoJapanese_Japan",
-                               "enabled":  true,
-                               "path":  "Plugins/GameFeatures/Theaters/Theater_RussoJapanese_Japan",
-                               "friendlyName":  "Theater_RussoJapanese_Japan",
-                               "version":  "0.1",
-                               "description":  "Act II content: Imperial Japanese forces, Russo-Japanese War (1904-1905). Nanshan, Yalu River, 203 Meter Hill, Mukden. Data-only.",
-                               "category":  "Collateral Damage|Theaters",
-                               "createdBy":  "Weekend Warrior Studios",
-                               "marketplaceUrl":  null
-                           },
-                           {
-                               "name":  "Theater_RussoJapanese_Russia",
-                               "enabled":  true,
-                               "path":  "Plugins/GameFeatures/Theaters/Theater_RussoJapanese_Russia",
-                               "friendlyName":  "Theater_RussoJapanese_Russia",
-                               "version":  "0.1",
-                               "description":  "Act II content: Imperial Russian forces, Russo-Japanese War (1904-1905). Nanshan, Yalu River, 203 Meter Hill, Mukden. Data-only.",
-                               "category":  "Collateral Damage|Theaters",
-                               "createdBy":  "Weekend Warrior Studios",
-                               "marketplaceUrl":  null
-                           },
-                           {
-                               "name":  "Theater_WWI_CentralPowers",
-                               "enabled":  true,
-                               "path":  "Plugins/GameFeatures/Theaters/Theater_WWI_CentralPowers",
-                               "friendlyName":  "Theater_WWI_CentralPowers",
-                               "version":  "0.1",
-                               "description":  "Act III content: Central Powers forces, World War I (1914-1918). Osowiec, Verdun, Somme/Flers-Courcelette, Passchendaele. Data-only.",
-                               "category":  "Collateral Damage|Theaters",
-                               "createdBy":  "Weekend Warrior Studios",
-                               "marketplaceUrl":  null
-                           },
-                           {
-                               "name":  "Theater_WWI_Entente",
-                               "enabled":  true,
-                               "path":  "Plugins/GameFeatures/Theaters/Theater_WWI_Entente",
-                               "friendlyName":  "Theater_WWI_Entente",
-                               "version":  "0.1",
-                               "description":  "Act III content: Entente forces, World War I (1914-1918). Osowiec, Verdun, Somme/Flers-Courcelette, Passchendaele. Data-only.",
+                               "description":  "Part II: The Great War (1914-1918).",
                                "category":  "Collateral Damage|Theaters",
                                "createdBy":  "Weekend Warrior Studios",
                                "marketplaceUrl":  null
@@ -254,6 +276,17 @@
                                "marketplaceUrl":  "com.epicgames.launcher://ue/Fab/product/576ae5f6-df60-42cc-b0e7-5681beb6d585"
                            },
                            {
+                               "name":  "TotalWar",
+                               "enabled":  true,
+                               "path":  "Plugins/GameFeatures/Theaters/IV-TotalWar",
+                               "friendlyName":  "Theater IV - Total War",
+                               "version":  "0.1",
+                               "description":  "Part IV: Total War (1939-1945).",
+                               "category":  "Collateral Damage|Theaters",
+                               "createdBy":  "Weekend Warrior Studios",
+                               "marketplaceUrl":  null
+                           },
+                           {
                                "name":  "VehiclesCombinedArms",
                                "enabled":  true,
                                "path":  "Plugins/GameFeatures/VehiclesCombinedArms",
@@ -265,18 +298,33 @@
                                "marketplaceUrl":  null
                            },
                            {
-                               "name":  "WeaponsFreeAim",
+                               "name":  "Weapons",
                                "enabled":  true,
-                               "path":  "Plugins/GameFeatures/WeaponsFreeAim",
-                               "friendlyName":  "WeaponsFreeAim",
+                               "path":  "Plugins/GameFeatures/Weapons",
+                               "friendlyName":  "Weapons",
                                "version":  "0.1",
-                               "description":  "Deadzone-driven weapon sweeping, recoil and sway, ballistics, and physical barrel collision. WWS-WPN.",
+                               "description":  "Deadzone-driven weapon sweeping, recoil and sway, ballistics, physical barrel collision, modular attachments, and weapon progression/unlocks. WWS-WPN.",
                                "category":  "Collateral Damage|Systems",
+                               "createdBy":  "Weekend Warrior Studios",
+                               "marketplaceUrl":  null
+                           },
+                           {
+                               "name":  "WWIII",
+                               "enabled":  true,
+                               "path":  "Plugins/GameFeatures/Theaters/X-WWIII",
+                               "friendlyName":  "Theater X - World War III",
+                               "version":  "0.1",
+                               "description":  "Part X: World War III (2032).",
+                               "category":  "Collateral Damage|Theaters",
                                "createdBy":  "Weekend Warrior Studios",
                                "marketplaceUrl":  null
                            }
                        ],
     "enginePlugins":  [
+                          {
+                              "name":  "AllToolsets",
+                              "enabled":  true
+                          },
                           {
                               "name":  "ChaosModularVehicle",
                               "enabled":  true
@@ -322,6 +370,38 @@
                               "enabled":  true
                           },
                           {
+                              "name":  "MetaHuman",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "MetaHumanCharacter",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "MetaHumanCharacterUAF",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "MetaHumanCoreTech",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "MetaHumanCrowd",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "MetaHumanLiveLink",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "MetaHumanSDK",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "ModelContextProtocol",
+                              "enabled":  true
+                          },
+                          {
                               "name":  "ModelingToolsEditorMode",
                               "enabled":  true
                           },
@@ -362,11 +442,36 @@
                               "enabled":  true
                           },
                           {
+                              "name":  "Terminal",
+                              "enabled":  true
+                          },
+                          {
                               "name":  "Voxel",
+                              "enabled":  true
+                          },
+                          {
+                              "name":  "Water",
                               "enabled":  true
                           }
                       ],
     "contentPacks":  [
-
+                         "BSP_ZombieAnims",
+                         "DistanceFields",
+                         "DynamicInputs",
+                         "Enums",
+                         "FluidNinjaLive",
+                         "Functions",
+                         "Icons",
+                         "Landscape",
+                         "LocomotionPackV02",
+                         "M4",
+                         "MilitaryWeapSilver",
+                         "Mixamo",
+                         "Modules",
+                         "ParameterDefinitions",
+                         "ParkourAnimations",
+                         "PreviewContent",
+                         "UltraDynamicSky",
+                         "UUSAnimationSet"
                      ]
 }

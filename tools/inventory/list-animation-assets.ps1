@@ -21,7 +21,7 @@ if (-not $OutputPath) {
     $OutputPath = Join-Path $outDir 'animation-assets.json'
 }
 
-$gameFeatureRoot = Join-Path $ProjectRoot 'Plugins\Game Features'
+$gameFeatureRoot = Join-Path $ProjectRoot 'Plugins\GameFeatures'
 
 # auto-detect Game Feature plugins if none specified
 if ($PluginNames.Count -eq 0) {
