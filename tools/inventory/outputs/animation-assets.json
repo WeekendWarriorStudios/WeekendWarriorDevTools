@@ -1,0 +1,177 @@
+﻿{
+    "generated":  "2026-08-22T08:00:14-07:00",
+    "plugins":  {
+                    "AtmosphereWeather":  {
+                                              "animations":  {
+
+                                                             },
+                                              "poseSearch":  {
+                                                                 "schemas":  [
+
+                                                                             ],
+                                                                 "databases":  [
+
+                                                                               ]
+                                                             }
+                                          },
+                    "CoreFramework":  {
+                                          "animations":  {
+
+                                                         },
+                                          "poseSearch":  {
+                                                             "schemas":  [
+
+                                                                         ],
+                                                             "databases":  [
+
+                                                                           ]
+                                                         }
+                                      },
+                    "DestructionEnvironment":  {
+                                                   "animations":  {
+
+                                                                  },
+                                                   "poseSearch":  {
+                                                                      "schemas":  [
+
+                                                                                  ],
+                                                                      "databases":  [
+
+                                                                                    ]
+                                                                  }
+                                               },
+                    "Frontend":  {
+                                     "animations":  {
+
+                                                    },
+                                     "poseSearch":  {
+                                                        "schemas":  [
+
+                                                                    ],
+                                                        "databases":  [
+
+                                                                      ]
+                                                    }
+                                 },
+                    "GameModes":  {
+                                      "animations":  {
+
+                                                     },
+                                      "poseSearch":  {
+                                                         "schemas":  [
+
+                                                                     ],
+                                                         "databases":  [
+
+                                                                       ]
+                                                     }
+                                  },
+                    "Loadout":  {
+                                    "animations":  {
+
+                                                   },
+                                    "poseSearch":  {
+                                                       "schemas":  [
+
+                                                                   ],
+                                                       "databases":  [
+
+                                                                     ]
+                                                   }
+                                },
+                    "MovementLocomotion":  {
+                                               "animations":  {
+
+                                                              },
+                                               "poseSearch":  {
+                                                                  "schemas":  [
+
+                                                                              ],
+                                                                  "databases":  [
+
+                                                                                ]
+                                                              }
+                                           },
+                    "NetworkingSessions":  {
+                                               "animations":  {
+
+                                                              },
+                                               "poseSearch":  {
+                                                                  "schemas":  [
+
+                                                                              ],
+                                                                  "databases":  [
+
+                                                                                ]
+                                                              }
+                                           },
+                    "PresentationUIAudio":  {
+                                                "animations":  {
+
+                                                               },
+                                                "poseSearch":  {
+                                                                   "schemas":  [
+
+                                                                               ],
+                                                                   "databases":  [
+
+                                                                                 ]
+                                                               }
+                                            },
+                    "TacticalRecon":  {
+                                          "animations":  {
+
+                                                         },
+                                          "poseSearch":  {
+                                                             "schemas":  [
+
+                                                                         ],
+                                                             "databases":  [
+
+                                                                           ]
+                                                         }
+                                      },
+                    "Theaters":  {
+                                     "animations":  {
+
+                                                    },
+                                     "poseSearch":  {
+                                                        "schemas":  [
+
+                                                                    ],
+                                                        "databases":  [
+
+                                                                      ]
+                                                    }
+                                 },
+                    "VehiclesCombinedArms":  {
+                                                 "animations":  {
+
+                                                                },
+                                                 "poseSearch":  {
+                                                                    "schemas":  [
+
+                                                                                ],
+                                                                    "databases":  [
+
+                                                                                  ]
+                                                                }
+                                             },
+                    "Weapons":  {
+                                    "animations":  {
+
+                                                   },
+                                    "poseSearch":  {
+                                                       "schemas":  [
+
+                                                                   ],
+                                                       "databases":  [
+
+                                                                     ]
+                                                   }
+                                }
+                },
+    "totalAnimations":  0,
+    "totalPoseSearch":  0,
+    "totalAssets":  0
+}
