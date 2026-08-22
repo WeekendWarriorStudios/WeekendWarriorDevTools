@@ -21,18 +21,26 @@ if (-not $OutputPath) {
     $OutputPath = Join-Path $outDir 'animation-assets.json'
 }
 
-$gameFeatureRoot = Join-Path $ProjectRoot 'Plugins\GameFeatures'
+$contentRoots = [System.Collections.Generic.List[object]]::new()
+$contentRoots.Add([PSCustomObject]@{ Name = '_project'; Path = Join-Path $ProjectRoot 'Content' })
 
-# auto-detect Game Feature plugins if none specified
-if ($PluginNames.Count -eq 0) {
-    if (Test-Path -LiteralPath $gameFeatureRoot) {
-        $PluginNames = Get-ChildItem -LiteralPath $gameFeatureRoot -Directory | ForEach-Object { $_.Name }
-    }
-    if ($PluginNames.Count -eq 0) {
-        Write-Host "No Game Feature plugins found in: $gameFeatureRoot"
-        exit 0
+$pluginFiles = Get-ChildItem -LiteralPath (Join-Path $ProjectRoot 'Plugins') -Recurse -Filter '*.uplugin' -File -ErrorAction SilentlyContinue
+foreach ($pluginFile in $pluginFiles) {
+    $pluginContent = Join-Path $pluginFile.DirectoryName 'Content'
+    if (Test-Path -LiteralPath $pluginContent) {
+        $contentRoots.Add([PSCustomObject]@{ Name = $pluginFile.BaseName; Path = $pluginContent })
     }
 }
+
+if ($PluginNames.Count -gt 0) {
+    $contentRoots = [System.Collections.Generic.List[object]]@(
+        $contentRoots | Where-Object { $_.Name -eq '_project' -or $_.Name -in $PluginNames }
+    )
+}
+
+$contentRoots = [System.Collections.Generic.List[object]]@(
+    $contentRoots | Group-Object Path | ForEach-Object { $_.Group[0] }
+)
 
 $result = [ordered]@{
     generated = (Get-Date -Format 'yyyy-MM-ddTHH:mm:ssK')
@@ -41,42 +49,31 @@ $result = [ordered]@{
 
 $totalAnimations = 0
 $totalPoseSearch = 0
+$seenAssets = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 
-foreach ($pluginName in $PluginNames) {
-    $contentRoot    = Join-Path $gameFeatureRoot "$pluginName\Content"
-    $animPath       = Join-Path $contentRoot 'Animations'
-    $poseSearchPath = Join-Path $contentRoot 'PoseSearch'
+foreach ($contentRootInfo in $contentRoots) {
+    $pluginName = $contentRootInfo.Name
+    $contentRoot = $contentRootInfo.Path
 
     $animations = [ordered]@{}
     $schemas    = [System.Collections.Generic.List[string]]::new()
     $databases  = [System.Collections.Generic.List[string]]::new()
     $psOther    = [System.Collections.Generic.List[string]]::new()
 
-    # --- Animations ---
-    if (Test-Path $animPath) {
-        $animFiles = Get-ChildItem -LiteralPath $animPath -Recurse -Filter '*.uasset' -File |
-                     Sort-Object DirectoryName, Name
+    if (-not (Test-Path -LiteralPath $contentRoot)) { continue }
 
-        foreach ($file in $animFiles) {
-            $relative  = $file.DirectoryName.Substring($animPath.Length).TrimStart('\', '/')
-            $category  = if ($relative) { $relative.Split('\')[0] } else { '_root' }
-            $assetName = [System.IO.Path]::GetFileNameWithoutExtension($file.Name)
+    foreach ($file in (Get-ChildItem -LiteralPath $contentRoot -Recurse -Filter '*.uasset' -File | Sort-Object FullName)) {
+        $relative = $file.FullName.Substring($contentRoot.Length).TrimStart('\', '/')
+        $parts = $relative -split '[\\/]'
+        $assetName = [System.IO.Path]::GetFileNameWithoutExtension($file.Name)
+        $isPoseSearch = $parts -contains 'PoseSearch' -or $assetName -like 'PSS_*' -or $assetName -like 'PSD_*'
+        $isAnimation = $parts -contains 'Animation' -or $parts -contains 'Animations' -or
+                       $assetName -match '^(AS|AM|ABP|AO|BS|PSS|PSD|PA)_'
 
-            if (-not $animations.Contains($category)) {
-                $animations[$category] = [System.Collections.Generic.List[string]]::new()
-            }
-            $animations[$category].Add($assetName)
-            $totalAnimations++
-        }
-    }
+        if (-not $isAnimation -and -not $isPoseSearch) { continue }
+        if (-not $seenAssets.Add($file.FullName)) { continue }
 
-    # --- Pose Search ---
-    if (Test-Path $poseSearchPath) {
-        $psFiles = Get-ChildItem -LiteralPath $poseSearchPath -Recurse -Filter '*.uasset' -File |
-                   Sort-Object Name
-
-        foreach ($file in $psFiles) {
-            $assetName = [System.IO.Path]::GetFileNameWithoutExtension($file.Name)
+        if ($isPoseSearch) {
             if ($assetName -like 'PSS_*') {
                 $schemas.Add($assetName)
             } elseif ($assetName -like 'PSD_*') {
@@ -85,7 +82,15 @@ foreach ($pluginName in $PluginNames) {
                 $psOther.Add($assetName)
             }
             $totalPoseSearch++
+            continue
         }
+
+        $category = if ($parts.Count -gt 1) { $parts[0] } else { '_root' }
+        if (-not $animations.Contains($category)) {
+            $animations[$category] = [System.Collections.Generic.List[string]]::new()
+        }
+        $animations[$category].Add($assetName)
+        $totalAnimations++
     }
 
     $poseSearch = [ordered]@{
