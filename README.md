@@ -160,6 +160,8 @@ nativization_recommender.recommend_nativization("/Game/", target_count=10)
 |--------|-------------|
 | `ue_remote_exec.py` | **(System Python)** Execute Python inside an *already-running* editor over the Python Remote Execution protocol — no restart, no clicking through the UI |
 | `audit_motion_matching.py` | **(Editor Python)** Validate a Pose Search pipeline end to end: schemas, databases, Chooser routing, unreachable databases, empty databases a Chooser still points at |
+| `wire_trajectory_to_pose_history.py` | **(Editor Python)** Connect an AnimInstance trajectory property to the Pose History node's Trajectory pin — the input motion matching silently fails without |
+| `rebuild_motion_matching_animgraph.py` | **(Editor Python)** Replace a hand-rolled Sequence Player + `MotionMatch` graph with the real Motion Matching node, and splice in a Slot so montages are visible |
 
 **Setup for `ue_remote_exec.py`** — once, in the editor:
 **Edit > Project Settings > Plugins > Python > [x] Enable Remote Execution**. Takes effect
@@ -191,6 +193,19 @@ audit_motion_matching.audit("/MyPlugin/Movement/PoseSearch")
 Motion matching fails silently — a wrong skeleton, an empty database, or a database no Chooser
 routes to produces a bad pose or reference pose with nothing in the log. This names the asset at
 fault instead.
+
+**Running editor Python with no editor open.** All three editor scripts also work as a commandlet,
+which is how to use them from CI or while the editor is closed:
+
+```powershell
+& "$Engine\Binaries\Win64\UnrealEditor-Cmd.exe" MyProject.uproject `
+    -run=pythonscript -script="...\audit_motion_matching.py" -unattended -nopause -nosplash
+```
+
+Two things to know about that mode. `unreal.log` output does **not** reach stdout under
+`-unattended` — read `Saved/Logs/<Project>.log`, or have the script write its own file. And the
+asset registry is not scanned up front the way it is in an interactive editor, so any script that
+uses `ARFilter` must call `scan_paths_synchronous` first or it will quietly find zero assets.
 
 ### python/level/ — Level/World Automation
 

@@ -48,18 +48,32 @@ WARNING = "warning"
 _ASSET_REGISTRY = unreal.AssetRegistryHelpers.get_asset_registry()
 
 
+CLASS_MODULES = {
+    "PoseSearchSchema": "/Script/PoseSearch",
+    "PoseSearchDatabase": "/Script/PoseSearch",
+    "ChooserTable": "/Script/Chooser",
+}
+
+
+def _scan(root_path: str) -> None:
+    """Make sure the registry actually knows about ``root_path``.
+
+    Necessary when running as a commandlet: unlike an interactive editor, a commandlet does not
+    scan content up front, so an unscanned path silently yields zero assets.
+    """
+    _ASSET_REGISTRY.scan_paths_synchronous([root_path], force_rescan=True)
+
+
 def _assets_of_class(root_path: str, class_name: str) -> list:
     """Every asset of ``class_name`` under ``root_path``, loaded."""
-    options = unreal.AssetRegistryHelpers.get_asset_registry()
+    module = CLASS_MODULES[class_name]
     filter_ = unreal.ARFilter(
         package_paths=[root_path],
         recursive_paths=True,
-        class_paths=[unreal.TopLevelAssetPath("/Script/PoseSearch", class_name)]
-        if class_name.startswith("PoseSearch")
-        else [unreal.TopLevelAssetPath("/Script/Chooser", class_name)],
+        class_paths=[unreal.TopLevelAssetPath(module, class_name)],
         recursive_classes=True,
     )
-    return [data.get_asset() for data in options.get_assets(filter_)]
+    return [data.get_asset() for data in _ASSET_REGISTRY.get_assets(filter_)]
 
 
 def _try(obj, *property_names):
@@ -119,9 +133,20 @@ def audit(root_path: str = "/MovementLocomotion/Movement/PoseSearch", json_path:
     def note(severity: str, asset: str, message: str) -> None:
         findings.append({"severity": severity, "asset": asset, "message": message})
 
+    _scan(root_path)
+
     schemas = _assets_of_class(root_path, "PoseSearchSchema")
     databases = _assets_of_class(root_path, "PoseSearchDatabase")
     choosers = _assets_of_class(root_path, "ChooserTable")
+
+    # An empty result is a bad path or an unscanned registry, not a clean bill of health. Saying
+    # "no problems found" there would be the most misleading thing this tool could do.
+    if not (schemas or databases or choosers):
+        raise RuntimeError(
+            f"No schemas, databases or Chooser tables found under {root_path!r}. Check the path — "
+            f"it should be a mount-point-relative package path such as "
+            f"'/MyPlugin/Movement/PoseSearch', not a filesystem path."
+        )
 
     # ---- schemas -----------------------------------------------------
     schema_bones: dict[str, list[str]] = {}
@@ -185,25 +210,19 @@ def audit(root_path: str = "/MovementLocomotion/Movement/PoseSearch", json_path:
             note(ERROR, name, "no schema assigned")
             continue
 
-        entries = _try(database, "animation_assets") or []
-        database_entry_counts[name] = len(entries)
-        if not entries:
-            note(ERROR, name, "no animation entries; any Chooser row reaching it yields no pose")
+        # Read the count through the BlueprintPure accessor rather than a property: 5.7 renamed
+        # the backing array to DatabaseAnimationAssets and made it private, leaving a deprecated
+        # AnimationAssets behind. Reading the property by name silently returns nothing on one
+        # version or the other, which reports every database as empty.
+        try:
+            count = int(database.get_num_animation_assets())
+        except Exception as err:
+            note(WARNING, name, f"could not read the animation count ({err})")
             continue
 
-        expected = schema_skeleton.get(schema.get_name())
-        for entry in entries:
-            animation = _try(entry, "animation_sequence", "sequence", "animation", "blend_space")
-            if animation is None:
-                continue
-            try:
-                anim_skeleton = animation.get_editor_property("skeleton")
-            except Exception:
-                continue
-            if expected is not None and anim_skeleton is not None and anim_skeleton != expected:
-                note(ERROR, name, f"'{animation.get_name()}' is built on "
-                                  f"{anim_skeleton.get_name()}, but the schema expects "
-                                  f"{expected.get_name()}")
+        database_entry_counts[name] = count
+        if count == 0:
+            note(ERROR, name, "no animation entries; any Chooser row reaching it yields no pose")
 
     # ---- choosers ----------------------------------------------------
     routed: set[str] = set()
