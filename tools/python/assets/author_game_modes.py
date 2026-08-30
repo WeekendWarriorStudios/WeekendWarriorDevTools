@@ -601,6 +601,10 @@ MODE_TUNING = {
     # condition one point per wave, so the two have to agree on 10 or the
     # match and the briefing disagree about how many waves it takes.
     "DA_GameMode_ZombieSurvival": {"score_target": 10},
+    # Matches DA_Objective_CaptureFlags' own TargetCount - first team to 3
+    # captures wins, and UCDCaptureTheFlagObjectiveComponent's FlagCaptured
+    # credit is what has to reach this number.
+    "DA_GameMode_CaptureTheFlag": {"score_target": 3},
 }
 
 

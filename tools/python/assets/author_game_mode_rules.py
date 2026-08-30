@@ -352,7 +352,12 @@ OBJECTIVES = [
         "briefing": "Into their base, out with their flag, and the whole way home again - while "
                     "yours is still where you left it.",
         "role": "PRIMARY",
-        "component": None,
+        # Was None ("the level or mission script completes it") - no flag
+        # actor, carrier state, or capture detection existed anywhere in the
+        # project. CDCaptureTheFlagObjectiveComponent gathers the level's
+        # ACDFlagActors (one per team, map-placed at each base) and drives
+        # pickup/return/capture off them directly.
+        "component": "CDCaptureTheFlagObjectiveComponent",
         "completion": "RETURN_FLAGS",
         "target": 3,
         "required": True,
@@ -366,7 +371,16 @@ OBJECTIVES = [
         "hud": "FINISH THE LADDER",
         "briefing": "Every kill hands you the next weapon on the rack. Finish the rack first.",
         "role": "PRIMARY",
-        "component": "CDEliminationObjectiveComponent",
+        # Was CDEliminationObjectiveComponent, which only counts kills - it
+        # never swapped a weapon or demoted anyone, so Gun Game played as a
+        # flat Deathmatch-to-12. CDGunGameLadderObjectiveComponent lives in
+        # the Loadout plugin (CDLoadout), not GameModes: it is the one place
+        # both UCDObjectiveComponent and UCDLoadoutComponent's kit-swap API
+        # are reachable from, since CDGameModes must not depend on CDLoadout.
+        # Its Rungs array still needs a real 12-weapon progression authored
+        # onto DA_Objective_ClimbWeaponLadder's ObjectiveComponentClass
+        # instance in-editor - this script only wires the class reference.
+        "component": "CDGunGameLadderObjectiveComponent",
         "completion": "COMPLETE_WEAPON_LADDER",
         "target": 12,
         "required": True,
