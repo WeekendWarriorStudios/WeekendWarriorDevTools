@@ -416,7 +416,14 @@ OBJECTIVES = [
         "briefing": "They come in waves and each one is worse than the last. Hold what you have "
                     "and keep each other upright.",
         "role": "PRIMARY",
-        "component": "CDEliminationObjectiveComponent",
+        # Was CDEliminationObjectiveComponent, which counts kills, not waves
+        # survived - and UCDAIDirectorSubsystem never reported a wave's
+        # completion to anything, so nothing could measure this regardless.
+        # CDSurviveWavesObjectiveComponent binds the director's own
+        # OnWaveBegun and feeds the existing generic score-target win
+        # condition one point per wave, the same way Deathmatch feeds it one
+        # point per kill.
+        "component": "CDSurviveWavesObjectiveComponent",
         "completion": "SURVIVE_WAVES",
         "target": 10,
         "required": True,

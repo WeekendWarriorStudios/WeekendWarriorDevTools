@@ -596,6 +596,11 @@ MODE_TUNING = {
     "DA_GameMode_Duel": {"rounds_to_win": 5, "lives_per_round": 1},
     "DA_GameMode_TrenchRaid": {"rounds_to_win": 5, "lives_per_round": 1},
     "DA_GameMode_TrainingCourse": {"match_time_limit_seconds": 0.0, "warmup_time_seconds": 0.0},
+    # Matches DA_Objective_SurviveWaves' own TargetCount (author_game_mode_rules.py) -
+    # UCDSurviveWavesObjectiveComponent feeds the generic score-target win
+    # condition one point per wave, so the two have to agree on 10 or the
+    # match and the briefing disagree about how many waves it takes.
+    "DA_GameMode_ZombieSurvival": {"score_target": 10},
 }
 
 
