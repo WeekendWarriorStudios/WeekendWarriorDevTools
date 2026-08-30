@@ -164,13 +164,21 @@ RULE_SETS = [
     {
         "asset": "DA_Rules_TrenchClose",
         "display": "TRENCH",
-        "summary": ["MELEE, SHOTGUNS AND SIDEARMS", "HIGH LETHALITY", "FAST RESPAWN"],
+        "summary": ["MELEE, SHOTGUNS AND SIDEARMS", "HIGH LETHALITY", "ONE LIFE PER ROUND"],
         # A trench network is too tight to swing a rifle in. The restriction is an
         # allow-list, so a weapon class added later stays out until someone says
         # otherwise.
+        #
+        # Respawn was TIMED at 3s here, which read as "fast respawn" but is
+        # incoherent against a round-based mode (RoundsToWin=5 in MODE_TUNING
+        # below): with players continuously respawning, no round ever runs out
+        # of a side to send, and UCDEliminationObjectiveComponent's round-life
+        # tracking never sees a bucket empty out. Elimination is what the other
+        # three round-based rule sets (RoundElimination, Marksman,
+        # OneInTheChamber) all use for exactly this reason.
         "combat": {"friendly_fire": "ENABLED", "friendly_fire_damage_scalar": 1.0,
                    "outgoing_damage_multiplier": 1.25},
-        "respawn": {"policy": "TIMED", "respawn_delay_override_seconds": 3.0},
+        "respawn": {"policy": "ELIMINATION", "allow_spectate_after_death": True},
         "loadout": {"allowed_weapon_class_tags": [
             "Weapon.Class.Melee", "Weapon.Class.Shotgun", "Weapon.Class.Pistol"]},
         "flow": {"minimum_players_to_start": 2, "allow_join_in_progress": False,
@@ -387,7 +395,13 @@ OBJECTIVES = [
         "briefing": "A hundred in and one out. Scavenge whatever you can find before the ring "
                     "makes the decision for you.",
         "role": "PRIMARY",
-        "component": "CDEliminationObjectiveComponent",
+        # Was CDEliminationObjectiveComponent, which only ever counts kills and
+        # has no notion of "who is still alive" - LastStanding is explicitly
+        # excluded from the generic counted-progress evaluator for exactly
+        # that reason (see UCDObjectiveDefinition::IsSatisfied). This is the
+        # dedicated component built for the shape, matching how Asymmetric
+        # Warfare gets its own rather than being forced into Elimination's.
+        "component": "CDLastStandingObjectiveComponent",
         "completion": "LAST_STANDING",
         "target": 0,
         "required": True,

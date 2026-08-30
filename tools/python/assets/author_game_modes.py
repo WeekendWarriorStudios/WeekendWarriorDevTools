@@ -594,7 +594,7 @@ MODE_TUNING = {
     "DA_GameMode_NoMansLand": {"rounds_to_win": 7, "lives_per_round": 1},
     "DA_GameMode_GasScramble": {"rounds_to_win": 5, "lives_per_round": 1},
     "DA_GameMode_Duel": {"rounds_to_win": 5, "lives_per_round": 1},
-    "DA_GameMode_TrenchRaid": {"rounds_to_win": 5},
+    "DA_GameMode_TrenchRaid": {"rounds_to_win": 5, "lives_per_round": 1},
     "DA_GameMode_TrainingCourse": {"match_time_limit_seconds": 0.0, "warmup_time_seconds": 0.0},
 }
 
