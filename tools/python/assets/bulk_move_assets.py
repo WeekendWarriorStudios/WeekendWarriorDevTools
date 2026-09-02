@@ -152,6 +152,62 @@ def _close_editor_for(pkg):
         unreal.get_editor_subsystem(unreal.AssetEditorSubsystem).close_all_editors_for_asset(asset)
 
 
+def fix_soft_references(plan, extra_roots=()):
+    """Repoint soft object paths that a rename left pointing at the old package.
+
+    `rename_asset` rewrites hard imports but leaves soft references (TSoftClassPtr, widget-class
+    pickers, soft asset pickers) resolving through the redirector dropped at the old path. Drop
+    those redirectors and the soft refs dangle silently - the asset still loads, the reference is
+    just null at runtime. Call this after moving and before deleting redirectors.
+    """
+    redirect_map = {}
+    for old_pkg, new_pkg in plan:
+        old_name = old_pkg.rsplit("/", 1)[1]
+        new_name = new_pkg.rsplit("/", 1)[1]
+        # Cover the object, its generated class, and the CDO - a class picker stores the _C form.
+        for old_obj, new_obj in (
+            ("%s.%s" % (old_pkg, old_name), "%s.%s" % (new_pkg, new_name)),
+            ("%s.%s_C" % (old_pkg, old_name), "%s.%s_C" % (new_pkg, new_name)),
+            ("%s.Default__%s_C" % (old_pkg, old_name),
+             "%s.Default__%s_C" % (new_pkg, new_name)),
+        ):
+            redirect_map[unreal.SoftObjectPath(old_obj)] = unreal.SoftObjectPath(new_obj)
+
+    roots = sorted({p.rsplit("/", 1)[0].split("/")[1] for _, p in plan} |
+                   {r.strip("/").split("/")[0] for r in extra_roots})
+    packages = []
+    for root in roots:
+        for d in (ARL.get_assets_by_path("/" + root, recursive=True) or []):
+            pkg = str(d.package_name)
+            EAL.load_asset(pkg)
+            p = unreal.find_package(pkg)
+            if p:
+                packages.append(p)
+
+    print("rewriting soft paths across %d packages, %d mappings"
+          % (len(packages), len(redirect_map)))
+    unreal.AssetToolsHelpers.get_asset_tools().rename_referencing_soft_object_paths(
+        packages, redirect_map)
+    ELSU.save_dirty_packages(True, True)
+
+
+def find_broken_references(roots):
+    """{package: [missing deps]} - the only trustworthy check. Grepping the file for path
+    strings gives false positives from stale name-table entries that are no longer imports."""
+    opts = unreal.AssetRegistryDependencyOptions(
+        include_soft_package_references=True, include_hard_package_references=True)
+    broken = {}
+    for root in roots:
+        for d in (ARL.get_assets_by_path(root, recursive=True) or []):
+            pkg = str(d.package_name)
+            for dep in (ARL.get_dependencies(unreal.Name(pkg), opts) or []):
+                dep = str(dep)
+                if dep.startswith(("/Game", "/")) and not dep.startswith(
+                        ("/Script", "/Engine")) and not EAL.does_asset_exist(dep):
+                    broken.setdefault(pkg, []).append(dep)
+    return broken
+
+
 def apply(plan, stale=()):
     """Execute the plan. Moves run before deletes, deliberately (gotcha 2)."""
     _park_off(plan)
@@ -164,6 +220,9 @@ def apply(plan, stale=()):
         if not ok:
             failed.append((src, dst))
         print("  %-62s -> %-62s %s" % (src, dst, "ok" if ok else "FAILED"))
+
+    # Before any redirector is removed, while both old and new names still resolve.
+    fix_soft_references([(s, d) for s, d in plan if (s, d) not in failed])
 
     print("=== deleting stale entries (%d) ===" % len(stale))
     for p in stale:
