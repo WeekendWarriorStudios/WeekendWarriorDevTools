@@ -129,6 +129,7 @@ These scripts run **inside the Unreal Editor** via `Edit > Execute Python Script
 
 | Script | Description |
 |--------|-------------|
+| `bulk_move_assets.py` | **(Editor Python)** Relocate many assets between content roots in one reviewed pass, references intact — folder rules + per-asset overrides, dry-run by default. Codifies two traps: `delete_asset` silently leaves git-tracked `.uasset` files on disk, and deleting a redirector strands a phantom package on that name until the editor restarts |
 | `lint_asset_names.py` | Scan Content path and auto-rename assets violating UE5 naming conventions (`T_`, `SM_`, `BP_`, etc.) — supports dry-run |
 | `generate_orm_texture.py` | Create channel-packed ORM texture asset (R=AO, G=Roughness, B=Metallic) from three source textures |
 | `validate-asset-data.py` | Scan Content for broken references, missing materials, orphaned textures, redirect chains |
