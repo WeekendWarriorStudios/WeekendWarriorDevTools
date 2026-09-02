@@ -102,6 +102,7 @@ $targets = @('Binaries','Intermediate','DerivedDataCache')
 
 $script:removed = @()
 $script:skipped = @()
+$script:previewed = @()
 $script:errors = @()
 $script:PluginInstalledCache = @{}
 
@@ -159,6 +160,7 @@ function Remove-PathSafely {
     if ($DryRun) {
         Write-Log "DRYRUN would remove: $Path"
         $script:skipped += $Path
+        $script:previewed += $Path
         return
     }
 
@@ -170,6 +172,42 @@ function Remove-PathSafely {
         Write-Log "ERROR removing $Path : $_"
         $script:errors += @{ Path = $Path; Error = $_ }
     }
+}
+
+function Show-GroupedPreview {
+    # Prints the folders that would be deleted, grouped by their parent folder,
+    # so a -DryRun pass is easy to scan instead of reading a flat log.
+    param(
+        [string[]]$Paths,
+        [string]$BaseDir
+    )
+
+    if (-not $Paths -or $Paths.Count -eq 0) {
+        Write-Host ""
+        Write-Host "Preview: nothing would be removed."
+        return
+    }
+
+    $baseFull = $null
+    try { $baseFull = (Resolve-Path -LiteralPath $BaseDir -ErrorAction Stop).Path.TrimEnd('\','/') } catch {}
+
+    $groups = $Paths | Group-Object { Split-Path -Parent $_ } | Sort-Object Name
+
+    Write-Host ""
+    Write-Host "Preview: folders that would be deleted, grouped by parent folder:"
+    foreach ($g in $groups) {
+        $parentDisplay = $g.Name
+        if ($baseFull -and $parentDisplay.StartsWith($baseFull, [System.StringComparison]::OrdinalIgnoreCase)) {
+            $rel = $parentDisplay.Substring($baseFull.Length).TrimStart('\','/')
+            if ($rel) { $parentDisplay = $rel }
+        }
+        Write-Host "  $parentDisplay"
+        foreach ($item in ($g.Group | Sort-Object)) {
+            Write-Host "    - $(Split-Path -Leaf $item)"
+        }
+    }
+    Write-Host ""
+    Write-Host "Preview total: $($Paths.Count) folder(s) across $($groups.Count) parent folder(s)."
 }
 
 # remove at repo root
@@ -250,6 +288,10 @@ if ($script:errors.Count -gt 0) {
 
 Write-Log "Cleanup finished"
 
+if ($DryRun) {
+    Show-GroupedPreview -Paths $script:previewed -BaseDir $RepoRoot
+}
+
 $summaryEntry = [ordered]@{
     runAt = (Get-Date).ToString('o')
     repository = $RepoRoot
@@ -265,6 +307,8 @@ $summaryEntry = [ordered]@{
     removedCount = $script:removed.Count
     skipped = $script:skipped
     skippedCount = $script:skipped.Count
+    previewed = $script:previewed
+    previewedCount = $script:previewed.Count
     errors = @()
     errorsCount = 0
     messages = @()

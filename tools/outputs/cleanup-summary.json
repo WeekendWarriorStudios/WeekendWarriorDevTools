@@ -484,5 +484,329 @@
                      ],
         "messagesCount":  40,
         "lastRunFile":  "A:\\Projects\\CollateralDamage\\WeekendWarriorDevTools\\tools\\outputs\\.last_cleanup"
+    },
+    {
+        "runAt":  "2026-09-01T17:35:28.8287090-07:00",
+        "repository":  "A:\\Projects\\CollateralDamage",
+        "options":  {
+                        "IncludePlugins":  true,
+                        "IncludeEngine":  false,
+                        "ForceTracked":  false,
+                        "DryRun":  true,
+                        "IgnoreLastRun":  true
+                    },
+        "targets":  [
+                        "Binaries",
+                        "Intermediate",
+                        "DerivedDataCache"
+                    ],
+        "removed":  [
+
+                    ],
+        "removedCount":  0,
+        "skipped":  [
+                        "A:\\Projects\\CollateralDamage\\Binaries",
+                        "A:\\Projects\\CollateralDamage\\Intermediate",
+                        "A:\\Projects\\CollateralDamage\\DerivedDataCache",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\AsyncLoadingScreen\\Binaries",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\AsyncLoadingScreen\\Intermediate",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\EOSIntegrationKit57\\Binaries",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\EOSIntegrationKit57\\Intermediate",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\AtmosphereWeather\\Binaries",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\AtmosphereWeather\\Intermediate",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\CoreFramework\\Binaries",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\CoreFramework\\Intermediate",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\DestructionEnvironment\\Binaries",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\DestructionEnvironment\\Intermediate",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Frontend\\Binaries",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Frontend\\Intermediate",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\GameModes\\Binaries",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\GameModes\\Intermediate",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Loadout\\Binaries",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Loadout\\Intermediate",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\MovementLocomotion\\Binaries",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\MovementLocomotion\\Intermediate",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\NetworkingSessions\\Binaries",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\NetworkingSessions\\Intermediate",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\PresentationUIAudio\\Binaries",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\PresentationUIAudio\\Intermediate",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\TacticalRecon\\Binaries",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\TacticalRecon\\Intermediate",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\VehiclesCombinedArms\\Binaries",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\VehiclesCombinedArms\\Intermediate",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Weapons\\Binaries",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Weapons\\Intermediate",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\PCGExtendedToolkit\\Binaries",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\PCGExtendedToolkit\\Intermediate",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\studio-mcp-tools\\Binaries",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\studio-mcp-tools\\Intermediate",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\ThreepeatAnimTools\\Binaries",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\ThreepeatAnimTools\\Intermediate"
+                    ],
+        "skippedCount":  37,
+        "previewed":  [
+                          "A:\\Projects\\CollateralDamage\\Binaries",
+                          "A:\\Projects\\CollateralDamage\\Intermediate",
+                          "A:\\Projects\\CollateralDamage\\DerivedDataCache",
+                          "A:\\Projects\\CollateralDamage\\Plugins\\AsyncLoadingScreen\\Intermediate",
+                          "A:\\Projects\\CollateralDamage\\Plugins\\EOSIntegrationKit57\\Intermediate",
+                          "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\AtmosphereWeather\\Binaries",
+                          "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\AtmosphereWeather\\Intermediate",
+                          "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\CoreFramework\\Binaries",
+                          "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\CoreFramework\\Intermediate",
+                          "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\DestructionEnvironment\\Binaries",
+                          "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\DestructionEnvironment\\Intermediate",
+                          "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Frontend\\Binaries",
+                          "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Frontend\\Intermediate",
+                          "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\GameModes\\Binaries",
+                          "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\GameModes\\Intermediate",
+                          "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Loadout\\Binaries",
+                          "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Loadout\\Intermediate",
+                          "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\MovementLocomotion\\Binaries",
+                          "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\MovementLocomotion\\Intermediate",
+                          "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\NetworkingSessions\\Binaries",
+                          "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\NetworkingSessions\\Intermediate",
+                          "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\PresentationUIAudio\\Binaries",
+                          "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\PresentationUIAudio\\Intermediate",
+                          "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\TacticalRecon\\Binaries",
+                          "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\TacticalRecon\\Intermediate",
+                          "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\VehiclesCombinedArms\\Binaries",
+                          "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\VehiclesCombinedArms\\Intermediate",
+                          "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Weapons\\Binaries",
+                          "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Weapons\\Intermediate",
+                          "A:\\Projects\\CollateralDamage\\Plugins\\PCGExtendedToolkit\\Binaries",
+                          "A:\\Projects\\CollateralDamage\\Plugins\\PCGExtendedToolkit\\Intermediate",
+                          "A:\\Projects\\CollateralDamage\\Plugins\\studio-mcp-tools\\Binaries",
+                          "A:\\Projects\\CollateralDamage\\Plugins\\studio-mcp-tools\\Intermediate",
+                          "A:\\Projects\\CollateralDamage\\Plugins\\ThreepeatAnimTools\\Intermediate"
+                      ],
+        "previewedCount":  34,
+        "errors":  [
+
+                   ],
+        "errorsCount":  0,
+        "messages":  [
+                         "[2026-09-01 17:35:27] Cleanup started",
+                         "[2026-09-01 17:35:27] Repository root: A:\\Projects\\CollateralDamage",
+                         "[2026-09-01 17:35:27] Options: IncludePlugins=True IncludeEngine=False ForceTracked=False DryRun=True",
+                         "[2026-09-01 17:35:27] DRYRUN would remove: A:\\Projects\\CollateralDamage\\Binaries",
+                         "[2026-09-01 17:35:27] DRYRUN would remove: A:\\Projects\\CollateralDamage\\Intermediate",
+                         "[2026-09-01 17:35:27] DRYRUN would remove: A:\\Projects\\CollateralDamage\\DerivedDataCache",
+                         "[2026-09-01 17:35:27] SKIP installed plugin binaries: A:\\Projects\\CollateralDamage\\Plugins\\AsyncLoadingScreen\\Binaries",
+                         "[2026-09-01 17:35:27] DRYRUN would remove: A:\\Projects\\CollateralDamage\\Plugins\\AsyncLoadingScreen\\Intermediate",
+                         "[2026-09-01 17:35:27] SKIP installed plugin binaries: A:\\Projects\\CollateralDamage\\Plugins\\EOSIntegrationKit57\\Binaries",
+                         "[2026-09-01 17:35:27] DRYRUN would remove: A:\\Projects\\CollateralDamage\\Plugins\\EOSIntegrationKit57\\Intermediate",
+                         "[2026-09-01 17:35:27] DRYRUN would remove: A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\AtmosphereWeather\\Binaries",
+                         "[2026-09-01 17:35:27] DRYRUN would remove: A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\AtmosphereWeather\\Intermediate",
+                         "[2026-09-01 17:35:27] DRYRUN would remove: A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\CoreFramework\\Binaries",
+                         "[2026-09-01 17:35:27] DRYRUN would remove: A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\CoreFramework\\Intermediate",
+                         "[2026-09-01 17:35:27] DRYRUN would remove: A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\DestructionEnvironment\\Binaries",
+                         "[2026-09-01 17:35:27] DRYRUN would remove: A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\DestructionEnvironment\\Intermediate",
+                         "[2026-09-01 17:35:27] DRYRUN would remove: A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Frontend\\Binaries",
+                         "[2026-09-01 17:35:27] DRYRUN would remove: A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Frontend\\Intermediate",
+                         "[2026-09-01 17:35:27] DRYRUN would remove: A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\GameModes\\Binaries",
+                         "[2026-09-01 17:35:27] DRYRUN would remove: A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\GameModes\\Intermediate",
+                         "[2026-09-01 17:35:27] DRYRUN would remove: A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Loadout\\Binaries",
+                         "[2026-09-01 17:35:28] DRYRUN would remove: A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Loadout\\Intermediate",
+                         "[2026-09-01 17:35:28] DRYRUN would remove: A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\MovementLocomotion\\Binaries",
+                         "[2026-09-01 17:35:28] DRYRUN would remove: A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\MovementLocomotion\\Intermediate",
+                         "[2026-09-01 17:35:28] DRYRUN would remove: A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\NetworkingSessions\\Binaries",
+                         "[2026-09-01 17:35:28] DRYRUN would remove: A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\NetworkingSessions\\Intermediate",
+                         "[2026-09-01 17:35:28] DRYRUN would remove: A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\PresentationUIAudio\\Binaries",
+                         "[2026-09-01 17:35:28] DRYRUN would remove: A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\PresentationUIAudio\\Intermediate",
+                         "[2026-09-01 17:35:28] DRYRUN would remove: A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\TacticalRecon\\Binaries",
+                         "[2026-09-01 17:35:28] DRYRUN would remove: A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\TacticalRecon\\Intermediate",
+                         "[2026-09-01 17:35:28] DRYRUN would remove: A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\VehiclesCombinedArms\\Binaries",
+                         "[2026-09-01 17:35:28] DRYRUN would remove: A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\VehiclesCombinedArms\\Intermediate",
+                         "[2026-09-01 17:35:28] DRYRUN would remove: A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Weapons\\Binaries",
+                         "[2026-09-01 17:35:28] DRYRUN would remove: A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Weapons\\Intermediate",
+                         "[2026-09-01 17:35:28] DRYRUN would remove: A:\\Projects\\CollateralDamage\\Plugins\\PCGExtendedToolkit\\Binaries",
+                         "[2026-09-01 17:35:28] DRYRUN would remove: A:\\Projects\\CollateralDamage\\Plugins\\PCGExtendedToolkit\\Intermediate",
+                         "[2026-09-01 17:35:28] DRYRUN would remove: A:\\Projects\\CollateralDamage\\Plugins\\studio-mcp-tools\\Binaries",
+                         "[2026-09-01 17:35:28] DRYRUN would remove: A:\\Projects\\CollateralDamage\\Plugins\\studio-mcp-tools\\Intermediate",
+                         "[2026-09-01 17:35:28] SKIP installed plugin binaries: A:\\Projects\\CollateralDamage\\Plugins\\ThreepeatAnimTools\\Binaries",
+                         "[2026-09-01 17:35:28] DRYRUN would remove: A:\\Projects\\CollateralDamage\\Plugins\\ThreepeatAnimTools\\Intermediate",
+                         "[2026-09-01 17:35:28] Summary: Removed=0 Skipped=37 Errors=0",
+                         "[2026-09-01 17:35:28] Cleanup finished"
+                     ],
+        "messagesCount":  42,
+        "lastRunFile":  "A:\\Projects\\CollateralDamage\\WeekendWarriorDevTools\\tools\\outputs\\.last_cleanup"
+    },
+    {
+        "runAt":  "2026-09-01T17:40:41.2011756-07:00",
+        "repository":  "A:\\Projects\\CollateralDamage",
+        "options":  {
+                        "IncludePlugins":  true,
+                        "IncludeEngine":  false,
+                        "ForceTracked":  false,
+                        "DryRun":  false,
+                        "IgnoreLastRun":  false
+                    },
+        "targets":  [
+                        "Binaries",
+                        "Intermediate",
+                        "DerivedDataCache"
+                    ],
+        "removed":  [
+                        "A:\\Projects\\CollateralDamage\\Intermediate",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\AsyncLoadingScreen\\Intermediate",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\EOSIntegrationKit57\\Intermediate",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\AtmosphereWeather\\Intermediate",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\CoreFramework\\Intermediate",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\DestructionEnvironment\\Intermediate",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Frontend\\Intermediate",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\GameModes\\Intermediate",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Loadout\\Intermediate",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\MovementLocomotion\\Intermediate",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\NetworkingSessions\\Intermediate",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\PresentationUIAudio\\Intermediate",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\TacticalRecon\\Intermediate",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\VehiclesCombinedArms\\Intermediate",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Weapons\\Intermediate",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\PCGExtendedToolkit\\Intermediate",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\studio-mcp-tools\\Intermediate",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\ThreepeatAnimTools\\Intermediate"
+                    ],
+        "removedCount":  18,
+        "skipped":  [
+                        "A:\\Projects\\CollateralDamage\\Plugins\\AsyncLoadingScreen\\Binaries",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\EOSIntegrationKit57\\Binaries",
+                        "A:\\Projects\\CollateralDamage\\Plugins\\ThreepeatAnimTools\\Binaries"
+                    ],
+        "skippedCount":  3,
+        "previewed":  [
+
+                      ],
+        "previewedCount":  0,
+        "errors":  [
+                       {
+                           "Path":  "A:\\Projects\\CollateralDamage\\Binaries",
+                           "Error":  "Remove-Item : Cannot remove item A:\\Projects\\CollateralDamage\\Binaries\\Win64\\UnrealEditor-CollateralDamage-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CollateralDamage-Win64-DebugGame.dll\u0027 is denied.\r\nAt A:\\Projects\\CollateralDamage\\WeekendWarriorDevTools\\tools\\build\\clean-untracked.ps1:168 char:9\r\n+         Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction S ...\r\n+         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : PermissionDenied: (UnrealEditor-Co...4-DebugGame.dll:FileInfo) [Remove-Item], UnauthorizedAccessException\r\n    + FullyQualifiedErrorId : RemoveFileSystemItemUnAuthorizedAccess,Microsoft.PowerShell.Commands.RemoveItemCommand"
+                       },
+                       {
+                           "Path":  "A:\\Projects\\CollateralDamage\\DerivedDataCache",
+                           "Error":  "Remove-Item : Cannot remove item A:\\Projects\\CollateralDamage\\DerivedDataCache\\VT\\TEXTURE_7C16439390E24F1F9468894FB4D4BC55_VTCHUNK02D4C3BCAD7DFA48AB32B8281FB06B8B83DB6275: The process cannot access the file \u0027TEXTURE_7C16439390E24F1F9468894FB4D4BC55_VTCHUNK02D4C3BCAD7DFA48AB32B8281FB06B8B83DB6275\u0027 because it is being used by another process.\r\nAt A:\\Projects\\CollateralDamage\\WeekendWarriorDevTools\\tools\\build\\clean-untracked.ps1:168 char:9\r\n+         Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction S ...\r\n+         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : WriteError: (TEXTURE_7C16439...FB06B8B83DB6275:FileInfo) [Remove-Item], IOException\r\n    + FullyQualifiedErrorId : RemoveFileSystemItemIOError,Microsoft.PowerShell.Commands.RemoveItemCommand"
+                       },
+                       {
+                           "Path":  "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\AtmosphereWeather\\Binaries",
+                           "Error":  "Remove-Item : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\AtmosphereWeather\\Binaries\\Win64\\UnrealEditor-CDAtmosphereWeather-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CDAtmosphereWeather-Win64-DebugGame.dll\u0027 is denied.\r\nAt A:\\Projects\\CollateralDamage\\WeekendWarriorDevTools\\tools\\build\\clean-untracked.ps1:168 char:9\r\n+         Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction S ...\r\n+         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : PermissionDenied: (UnrealEditor-CD...4-DebugGame.dll:FileInfo) [Remove-Item], UnauthorizedAccessException\r\n    + FullyQualifiedErrorId : RemoveFileSystemItemUnAuthorizedAccess,Microsoft.PowerShell.Commands.RemoveItemCommand"
+                       },
+                       {
+                           "Path":  "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\CoreFramework\\Binaries",
+                           "Error":  "Remove-Item : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\CoreFramework\\Binaries\\Win64\\UnrealEditor-CDCoreFramework-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CDCoreFramework-Win64-DebugGame.dll\u0027 is denied.\r\nAt A:\\Projects\\CollateralDamage\\WeekendWarriorDevTools\\tools\\build\\clean-untracked.ps1:168 char:9\r\n+         Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction S ...\r\n+         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : PermissionDenied: (UnrealEditor-CD...4-DebugGame.dll:FileInfo) [Remove-Item], UnauthorizedAccessException\r\n    + FullyQualifiedErrorId : RemoveFileSystemItemUnAuthorizedAccess,Microsoft.PowerShell.Commands.RemoveItemCommand"
+                       },
+                       {
+                           "Path":  "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\DestructionEnvironment\\Binaries",
+                           "Error":  "Remove-Item : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\DestructionEnvironment\\Binaries\\Win64\\UnrealEditor-CDDestructionEnvironment-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CDDestructionEnvironment-Win64-DebugGame.dll\u0027 is denied.\r\nAt A:\\Projects\\CollateralDamage\\WeekendWarriorDevTools\\tools\\build\\clean-untracked.ps1:168 char:9\r\n+         Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction S ...\r\n+         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : PermissionDenied: (UnrealEditor-CD...4-DebugGame.dll:FileInfo) [Remove-Item], UnauthorizedAccessException\r\n    + FullyQualifiedErrorId : RemoveFileSystemItemUnAuthorizedAccess,Microsoft.PowerShell.Commands.RemoveItemCommand"
+                       },
+                       {
+                           "Path":  "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Frontend\\Binaries",
+                           "Error":  "Remove-Item : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Frontend\\Binaries\\Win64\\UnrealEditor-CDFrontend-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CDFrontend-Win64-DebugGame.dll\u0027 is denied.\r\nAt A:\\Projects\\CollateralDamage\\WeekendWarriorDevTools\\tools\\build\\clean-untracked.ps1:168 char:9\r\n+         Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction S ...\r\n+         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : PermissionDenied: (UnrealEditor-CD...4-DebugGame.dll:FileInfo) [Remove-Item], UnauthorizedAccessException\r\n    + FullyQualifiedErrorId : RemoveFileSystemItemUnAuthorizedAccess,Microsoft.PowerShell.Commands.RemoveItemCommand"
+                       },
+                       {
+                           "Path":  "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\GameModes\\Binaries",
+                           "Error":  "Remove-Item : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\GameModes\\Binaries\\Win64\\UnrealEditor-CDGameModes-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CDGameModes-Win64-DebugGame.dll\u0027 is denied.\r\nAt A:\\Projects\\CollateralDamage\\WeekendWarriorDevTools\\tools\\build\\clean-untracked.ps1:168 char:9\r\n+         Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction S ...\r\n+         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : PermissionDenied: (UnrealEditor-CD...4-DebugGame.dll:FileInfo) [Remove-Item], UnauthorizedAccessException\r\n    + FullyQualifiedErrorId : RemoveFileSystemItemUnAuthorizedAccess,Microsoft.PowerShell.Commands.RemoveItemCommand"
+                       },
+                       {
+                           "Path":  "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Loadout\\Binaries",
+                           "Error":  "Remove-Item : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Loadout\\Binaries\\Win64\\UnrealEditor-CDLoadout-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CDLoadout-Win64-DebugGame.dll\u0027 is denied.\r\nAt A:\\Projects\\CollateralDamage\\WeekendWarriorDevTools\\tools\\build\\clean-untracked.ps1:168 char:9\r\n+         Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction S ...\r\n+         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : PermissionDenied: (UnrealEditor-CD...4-DebugGame.dll:FileInfo) [Remove-Item], UnauthorizedAccessException\r\n    + FullyQualifiedErrorId : RemoveFileSystemItemUnAuthorizedAccess,Microsoft.PowerShell.Commands.RemoveItemCommand"
+                       },
+                       {
+                           "Path":  "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\MovementLocomotion\\Binaries",
+                           "Error":  "Remove-Item : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\MovementLocomotion\\Binaries\\Win64\\UnrealEditor-CDMovementLocomotion-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CDMovementLocomotion-Win64-DebugGame.dll\u0027 is denied.\r\nAt A:\\Projects\\CollateralDamage\\WeekendWarriorDevTools\\tools\\build\\clean-untracked.ps1:168 char:9\r\n+         Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction S ...\r\n+         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : PermissionDenied: (UnrealEditor-CD...4-DebugGame.dll:FileInfo) [Remove-Item], UnauthorizedAccessException\r\n    + FullyQualifiedErrorId : RemoveFileSystemItemUnAuthorizedAccess,Microsoft.PowerShell.Commands.RemoveItemCommand"
+                       },
+                       {
+                           "Path":  "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\NetworkingSessions\\Binaries",
+                           "Error":  "Remove-Item : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\NetworkingSessions\\Binaries\\Win64\\UnrealEditor-CDNetworkingSessions-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CDNetworkingSessions-Win64-DebugGame.dll\u0027 is denied.\r\nAt A:\\Projects\\CollateralDamage\\WeekendWarriorDevTools\\tools\\build\\clean-untracked.ps1:168 char:9\r\n+         Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction S ...\r\n+         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : PermissionDenied: (UnrealEditor-CD...4-DebugGame.dll:FileInfo) [Remove-Item], UnauthorizedAccessException\r\n    + FullyQualifiedErrorId : RemoveFileSystemItemUnAuthorizedAccess,Microsoft.PowerShell.Commands.RemoveItemCommand"
+                       },
+                       {
+                           "Path":  "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\PresentationUIAudio\\Binaries",
+                           "Error":  "Remove-Item : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\PresentationUIAudio\\Binaries\\Win64\\UnrealEditor-CDPresentationUIAudio-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CDPresentationUIAudio-Win64-DebugGame.dll\u0027 is denied.\r\nAt A:\\Projects\\CollateralDamage\\WeekendWarriorDevTools\\tools\\build\\clean-untracked.ps1:168 char:9\r\n+         Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction S ...\r\n+         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : PermissionDenied: (UnrealEditor-CD...4-DebugGame.dll:FileInfo) [Remove-Item], UnauthorizedAccessException\r\n    + FullyQualifiedErrorId : RemoveFileSystemItemUnAuthorizedAccess,Microsoft.PowerShell.Commands.RemoveItemCommand"
+                       },
+                       {
+                           "Path":  "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\TacticalRecon\\Binaries",
+                           "Error":  "Remove-Item : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\TacticalRecon\\Binaries\\Win64\\UnrealEditor-CDTacticalRecon-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CDTacticalRecon-Win64-DebugGame.dll\u0027 is denied.\r\nAt A:\\Projects\\CollateralDamage\\WeekendWarriorDevTools\\tools\\build\\clean-untracked.ps1:168 char:9\r\n+         Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction S ...\r\n+         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : PermissionDenied: (UnrealEditor-CD...4-DebugGame.dll:FileInfo) [Remove-Item], UnauthorizedAccessException\r\n    + FullyQualifiedErrorId : RemoveFileSystemItemUnAuthorizedAccess,Microsoft.PowerShell.Commands.RemoveItemCommand"
+                       },
+                       {
+                           "Path":  "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\VehiclesCombinedArms\\Binaries",
+                           "Error":  "Remove-Item : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\VehiclesCombinedArms\\Binaries\\Win64\\UnrealEditor-CDVehiclesCombinedArms-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CDVehiclesCombinedArms-Win64-DebugGame.dll\u0027 is denied.\r\nAt A:\\Projects\\CollateralDamage\\WeekendWarriorDevTools\\tools\\build\\clean-untracked.ps1:168 char:9\r\n+         Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction S ...\r\n+         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : PermissionDenied: (UnrealEditor-CD...4-DebugGame.dll:FileInfo) [Remove-Item], UnauthorizedAccessException\r\n    + FullyQualifiedErrorId : RemoveFileSystemItemUnAuthorizedAccess,Microsoft.PowerShell.Commands.RemoveItemCommand"
+                       },
+                       {
+                           "Path":  "A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Weapons\\Binaries",
+                           "Error":  "Remove-Item : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Weapons\\Binaries\\Win64\\UnrealEditor-CDWeapons-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CDWeapons-Win64-DebugGame.dll\u0027 is denied.\r\nAt A:\\Projects\\CollateralDamage\\WeekendWarriorDevTools\\tools\\build\\clean-untracked.ps1:168 char:9\r\n+         Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction S ...\r\n+         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : PermissionDenied: (UnrealEditor-CD...4-DebugGame.dll:FileInfo) [Remove-Item], UnauthorizedAccessException\r\n    + FullyQualifiedErrorId : RemoveFileSystemItemUnAuthorizedAccess,Microsoft.PowerShell.Commands.RemoveItemCommand"
+                       },
+                       {
+                           "Path":  "A:\\Projects\\CollateralDamage\\Plugins\\PCGExtendedToolkit\\Binaries",
+                           "Error":  "Remove-Item : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\PCGExtendedToolkit\\Binaries\\Win64\\UnrealEditor-PCGExBlending-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-PCGExBlending-Win64-DebugGame.dll\u0027 is denied.\r\nAt A:\\Projects\\CollateralDamage\\WeekendWarriorDevTools\\tools\\build\\clean-untracked.ps1:168 char:9\r\n+         Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction S ...\r\n+         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : PermissionDenied: (UnrealEditor-PC...4-DebugGame.dll:FileInfo) [Remove-Item], UnauthorizedAccessException\r\n    + FullyQualifiedErrorId : RemoveFileSystemItemUnAuthorizedAccess,Microsoft.PowerShell.Commands.RemoveItemCommand"
+                       },
+                       {
+                           "Path":  "A:\\Projects\\CollateralDamage\\Plugins\\studio-mcp-tools\\Binaries",
+                           "Error":  "Remove-Item : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\studio-mcp-tools\\Binaries\\Win64\\UnrealEditor-StudioMCPTools-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-StudioMCPTools-Win64-DebugGame.dll\u0027 is denied.\r\nAt A:\\Projects\\CollateralDamage\\WeekendWarriorDevTools\\tools\\build\\clean-untracked.ps1:168 char:9\r\n+         Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction S ...\r\n+         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : PermissionDenied: (UnrealEditor-St...4-DebugGame.dll:FileInfo) [Remove-Item], UnauthorizedAccessException\r\n    + FullyQualifiedErrorId : RemoveFileSystemItemUnAuthorizedAccess,Microsoft.PowerShell.Commands.RemoveItemCommand"
+                       }
+                   ],
+        "errorsCount":  16,
+        "messages":  [
+                         "[2026-09-01 17:40:35] Cleanup started",
+                         "[2026-09-01 17:40:35] Repository root: A:\\Projects\\CollateralDamage",
+                         "[2026-09-01 17:40:35] Options: IncludePlugins=True IncludeEngine=False ForceTracked=False DryRun=False",
+                         "[2026-09-01 17:40:35] ERROR removing A:\\Projects\\CollateralDamage\\Binaries : Cannot remove item A:\\Projects\\CollateralDamage\\Binaries\\Win64\\UnrealEditor-CollateralDamage-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CollateralDamage-Win64-DebugGame.dll\u0027 is denied.",
+                         "[2026-09-01 17:40:38] REMOVED: A:\\Projects\\CollateralDamage\\Intermediate",
+                         "[2026-09-01 17:40:38] ERROR removing A:\\Projects\\CollateralDamage\\DerivedDataCache : Cannot remove item A:\\Projects\\CollateralDamage\\DerivedDataCache\\VT\\TEXTURE_7C16439390E24F1F9468894FB4D4BC55_VTCHUNK02D4C3BCAD7DFA48AB32B8281FB06B8B83DB6275: The process cannot access the file \u0027TEXTURE_7C16439390E24F1F9468894FB4D4BC55_VTCHUNK02D4C3BCAD7DFA48AB32B8281FB06B8B83DB6275\u0027 because it is being used by another process.",
+                         "[2026-09-01 17:40:38] SKIP installed plugin binaries: A:\\Projects\\CollateralDamage\\Plugins\\AsyncLoadingScreen\\Binaries",
+                         "[2026-09-01 17:40:38] REMOVED: A:\\Projects\\CollateralDamage\\Plugins\\AsyncLoadingScreen\\Intermediate",
+                         "[2026-09-01 17:40:38] SKIP installed plugin binaries: A:\\Projects\\CollateralDamage\\Plugins\\EOSIntegrationKit57\\Binaries",
+                         "[2026-09-01 17:40:38] REMOVED: A:\\Projects\\CollateralDamage\\Plugins\\EOSIntegrationKit57\\Intermediate",
+                         "[2026-09-01 17:40:38] ERROR removing A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\AtmosphereWeather\\Binaries : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\AtmosphereWeather\\Binaries\\Win64\\UnrealEditor-CDAtmosphereWeather-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CDAtmosphereWeather-Win64-DebugGame.dll\u0027 is denied.",
+                         "[2026-09-01 17:40:39] REMOVED: A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\AtmosphereWeather\\Intermediate",
+                         "[2026-09-01 17:40:39] ERROR removing A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\CoreFramework\\Binaries : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\CoreFramework\\Binaries\\Win64\\UnrealEditor-CDCoreFramework-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CDCoreFramework-Win64-DebugGame.dll\u0027 is denied.",
+                         "[2026-09-01 17:40:39] REMOVED: A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\CoreFramework\\Intermediate",
+                         "[2026-09-01 17:40:39] ERROR removing A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\DestructionEnvironment\\Binaries : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\DestructionEnvironment\\Binaries\\Win64\\UnrealEditor-CDDestructionEnvironment-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CDDestructionEnvironment-Win64-DebugGame.dll\u0027 is denied.",
+                         "[2026-09-01 17:40:39] REMOVED: A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\DestructionEnvironment\\Intermediate",
+                         "[2026-09-01 17:40:39] ERROR removing A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Frontend\\Binaries : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Frontend\\Binaries\\Win64\\UnrealEditor-CDFrontend-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CDFrontend-Win64-DebugGame.dll\u0027 is denied.",
+                         "[2026-09-01 17:40:39] REMOVED: A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Frontend\\Intermediate",
+                         "[2026-09-01 17:40:39] ERROR removing A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\GameModes\\Binaries : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\GameModes\\Binaries\\Win64\\UnrealEditor-CDGameModes-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CDGameModes-Win64-DebugGame.dll\u0027 is denied.",
+                         "[2026-09-01 17:40:39] REMOVED: A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\GameModes\\Intermediate",
+                         "[2026-09-01 17:40:39] ERROR removing A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Loadout\\Binaries : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Loadout\\Binaries\\Win64\\UnrealEditor-CDLoadout-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CDLoadout-Win64-DebugGame.dll\u0027 is denied.",
+                         "[2026-09-01 17:40:39] REMOVED: A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Loadout\\Intermediate",
+                         "[2026-09-01 17:40:39] ERROR removing A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\MovementLocomotion\\Binaries : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\MovementLocomotion\\Binaries\\Win64\\UnrealEditor-CDMovementLocomotion-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CDMovementLocomotion-Win64-DebugGame.dll\u0027 is denied.",
+                         "[2026-09-01 17:40:39] REMOVED: A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\MovementLocomotion\\Intermediate",
+                         "[2026-09-01 17:40:39] ERROR removing A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\NetworkingSessions\\Binaries : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\NetworkingSessions\\Binaries\\Win64\\UnrealEditor-CDNetworkingSessions-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CDNetworkingSessions-Win64-DebugGame.dll\u0027 is denied.",
+                         "[2026-09-01 17:40:39] REMOVED: A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\NetworkingSessions\\Intermediate",
+                         "[2026-09-01 17:40:39] ERROR removing A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\PresentationUIAudio\\Binaries : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\PresentationUIAudio\\Binaries\\Win64\\UnrealEditor-CDPresentationUIAudio-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CDPresentationUIAudio-Win64-DebugGame.dll\u0027 is denied.",
+                         "[2026-09-01 17:40:39] REMOVED: A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\PresentationUIAudio\\Intermediate",
+                         "[2026-09-01 17:40:39] ERROR removing A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\TacticalRecon\\Binaries : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\TacticalRecon\\Binaries\\Win64\\UnrealEditor-CDTacticalRecon-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CDTacticalRecon-Win64-DebugGame.dll\u0027 is denied.",
+                         "[2026-09-01 17:40:39] REMOVED: A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\TacticalRecon\\Intermediate",
+                         "[2026-09-01 17:40:40] ERROR removing A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\VehiclesCombinedArms\\Binaries : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\VehiclesCombinedArms\\Binaries\\Win64\\UnrealEditor-CDVehiclesCombinedArms-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CDVehiclesCombinedArms-Win64-DebugGame.dll\u0027 is denied.",
+                         "[2026-09-01 17:40:40] REMOVED: A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\VehiclesCombinedArms\\Intermediate",
+                         "[2026-09-01 17:40:40] ERROR removing A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Weapons\\Binaries : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Weapons\\Binaries\\Win64\\UnrealEditor-CDWeapons-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CDWeapons-Win64-DebugGame.dll\u0027 is denied.",
+                         "[2026-09-01 17:40:40] REMOVED: A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Weapons\\Intermediate",
+                         "[2026-09-01 17:40:40] ERROR removing A:\\Projects\\CollateralDamage\\Plugins\\PCGExtendedToolkit\\Binaries : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\PCGExtendedToolkit\\Binaries\\Win64\\UnrealEditor-PCGExBlending-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-PCGExBlending-Win64-DebugGame.dll\u0027 is denied.",
+                         "[2026-09-01 17:40:41] REMOVED: A:\\Projects\\CollateralDamage\\Plugins\\PCGExtendedToolkit\\Intermediate",
+                         "[2026-09-01 17:40:41] ERROR removing A:\\Projects\\CollateralDamage\\Plugins\\studio-mcp-tools\\Binaries : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\studio-mcp-tools\\Binaries\\Win64\\UnrealEditor-StudioMCPTools-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-StudioMCPTools-Win64-DebugGame.dll\u0027 is denied.",
+                         "[2026-09-01 17:40:41] REMOVED: A:\\Projects\\CollateralDamage\\Plugins\\studio-mcp-tools\\Intermediate",
+                         "[2026-09-01 17:40:41] SKIP installed plugin binaries: A:\\Projects\\CollateralDamage\\Plugins\\ThreepeatAnimTools\\Binaries",
+                         "[2026-09-01 17:40:41] REMOVED: A:\\Projects\\CollateralDamage\\Plugins\\ThreepeatAnimTools\\Intermediate",
+                         "[2026-09-01 17:40:41] Summary: Removed=18 Skipped=3 Errors=16",
+                         "[2026-09-01 17:40:41] Errors detail:",
+                         "[2026-09-01 17:40:41] A:\\Projects\\CollateralDamage\\Binaries : Cannot remove item A:\\Projects\\CollateralDamage\\Binaries\\Win64\\UnrealEditor-CollateralDamage-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CollateralDamage-Win64-DebugGame.dll\u0027 is denied.",
+                         "[2026-09-01 17:40:41] A:\\Projects\\CollateralDamage\\DerivedDataCache : Cannot remove item A:\\Projects\\CollateralDamage\\DerivedDataCache\\VT\\TEXTURE_7C16439390E24F1F9468894FB4D4BC55_VTCHUNK02D4C3BCAD7DFA48AB32B8281FB06B8B83DB6275: The process cannot access the file \u0027TEXTURE_7C16439390E24F1F9468894FB4D4BC55_VTCHUNK02D4C3BCAD7DFA48AB32B8281FB06B8B83DB6275\u0027 because it is being used by another process.",
+                         "[2026-09-01 17:40:41] A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\AtmosphereWeather\\Binaries : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\AtmosphereWeather\\Binaries\\Win64\\UnrealEditor-CDAtmosphereWeather-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CDAtmosphereWeather-Win64-DebugGame.dll\u0027 is denied.",
+                         "[2026-09-01 17:40:41] A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\CoreFramework\\Binaries : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\CoreFramework\\Binaries\\Win64\\UnrealEditor-CDCoreFramework-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CDCoreFramework-Win64-DebugGame.dll\u0027 is denied.",
+                         "[2026-09-01 17:40:41] A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\DestructionEnvironment\\Binaries : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\DestructionEnvironment\\Binaries\\Win64\\UnrealEditor-CDDestructionEnvironment-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CDDestructionEnvironment-Win64-DebugGame.dll\u0027 is denied.",
+                         "[2026-09-01 17:40:41] A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Frontend\\Binaries : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Frontend\\Binaries\\Win64\\UnrealEditor-CDFrontend-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CDFrontend-Win64-DebugGame.dll\u0027 is denied.",
+                         "[2026-09-01 17:40:41] A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\GameModes\\Binaries : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\GameModes\\Binaries\\Win64\\UnrealEditor-CDGameModes-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CDGameModes-Win64-DebugGame.dll\u0027 is denied.",
+                         "[2026-09-01 17:40:41] A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Loadout\\Binaries : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Loadout\\Binaries\\Win64\\UnrealEditor-CDLoadout-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CDLoadout-Win64-DebugGame.dll\u0027 is denied.",
+                         "[2026-09-01 17:40:41] A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\MovementLocomotion\\Binaries : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\MovementLocomotion\\Binaries\\Win64\\UnrealEditor-CDMovementLocomotion-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CDMovementLocomotion-Win64-DebugGame.dll\u0027 is denied.",
+                         "[2026-09-01 17:40:41] A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\NetworkingSessions\\Binaries : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\NetworkingSessions\\Binaries\\Win64\\UnrealEditor-CDNetworkingSessions-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CDNetworkingSessions-Win64-DebugGame.dll\u0027 is denied.",
+                         "[2026-09-01 17:40:41] A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\PresentationUIAudio\\Binaries : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\PresentationUIAudio\\Binaries\\Win64\\UnrealEditor-CDPresentationUIAudio-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CDPresentationUIAudio-Win64-DebugGame.dll\u0027 is denied.",
+                         "[2026-09-01 17:40:41] A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\TacticalRecon\\Binaries : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\TacticalRecon\\Binaries\\Win64\\UnrealEditor-CDTacticalRecon-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CDTacticalRecon-Win64-DebugGame.dll\u0027 is denied.",
+                         "[2026-09-01 17:40:41] A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\VehiclesCombinedArms\\Binaries : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\VehiclesCombinedArms\\Binaries\\Win64\\UnrealEditor-CDVehiclesCombinedArms-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CDVehiclesCombinedArms-Win64-DebugGame.dll\u0027 is denied.",
+                         "[2026-09-01 17:40:41] A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Weapons\\Binaries : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\GameFeatures\\Weapons\\Binaries\\Win64\\UnrealEditor-CDWeapons-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-CDWeapons-Win64-DebugGame.dll\u0027 is denied.",
+                         "[2026-09-01 17:40:41] A:\\Projects\\CollateralDamage\\Plugins\\PCGExtendedToolkit\\Binaries : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\PCGExtendedToolkit\\Binaries\\Win64\\UnrealEditor-PCGExBlending-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-PCGExBlending-Win64-DebugGame.dll\u0027 is denied.",
+                         "[2026-09-01 17:40:41] A:\\Projects\\CollateralDamage\\Plugins\\studio-mcp-tools\\Binaries : Cannot remove item A:\\Projects\\CollateralDamage\\Plugins\\studio-mcp-tools\\Binaries\\Win64\\UnrealEditor-StudioMCPTools-Win64-DebugGame.dll: Access to the path \u0027UnrealEditor-StudioMCPTools-Win64-DebugGame.dll\u0027 is denied.",
+                         "[2026-09-01 17:40:41] Cleanup finished"
+                     ],
+        "messagesCount":  59,
+        "lastRunFile":  "A:\\Projects\\CollateralDamage\\WeekendWarriorDevTools\\tools\\outputs\\.last_cleanup"
     }
 ]
