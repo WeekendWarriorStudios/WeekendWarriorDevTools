@@ -129,6 +129,7 @@ These scripts run **inside the Unreal Editor** via `Edit > Execute Python Script
 
 | Script | Description |
 |--------|-------------|
+| `author_game_modes.py` | **(Editor Python)** Author the whole game mode roster — one `DA_GameMode_*` UI tile plus its paired `UCDGameModeData` per mode — from a single table, dry-run by default. Tags are generalized mechanic names, never shipped names, so re-theming a mode per Part is a `PartDisplayNameOverrides` entry rather than a retag. Mirrors the tile's rule/reward/stake/objective fields off the mode data instead of listing them twice, since `IsDataValid` errors on the two disagreeing. **Restart the editor first** if `Config/Tags/Frontend.ini` changed — the tag table is read at startup |
 | `bulk_move_assets.py` | **(Editor Python)** Relocate many assets between content roots in one reviewed pass, references intact — folder rules + per-asset overrides, dry-run by default. Codifies two traps: `delete_asset` silently leaves git-tracked `.uasset` files on disk, and deleting a redirector strands a phantom package on that name until the editor restarts |
 | `lint_asset_names.py` | Scan Content path and auto-rename assets violating UE5 naming conventions (`T_`, `SM_`, `BP_`, etc.) — supports dry-run |
 | `generate_orm_texture.py` | Create channel-packed ORM texture asset (R=AO, G=Roughness, B=Metallic) from three source textures |
