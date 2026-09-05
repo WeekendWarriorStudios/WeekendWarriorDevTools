@@ -1,5 +1,6 @@
 """
-Export authored Blueprints, PCG/Voxel graphs, and Data Assets to human-readable markdown.
+Export authored Blueprints, PCG/Voxel graphs, Levels, Rigs, Animation assets, Sequences, and
+Data Assets to human-readable markdown.
 
 Blueprint EventGraph/FunctionGraph/MacroGraph node and pin data isn't reachable through
 generic Python reflection: UEdGraphPin stopped being a UObject around UE 4.24 (a compile-time
@@ -9,8 +10,12 @@ unreal.BlueprintGraphExportLibrary.export_blueprint_graphs_to_text() (a small C+
 Plugins/ColossusMCPTools) which wraps FEdGraphUtilities::ExportNodesToText — the same engine
 facility that backs Blueprint node copy/paste — then parses that text into markdown here.
 
-Data Assets don't have that problem (UDataAsset subclasses are ordinary reflected UObjects), so
-those are dumped via plain get_editor_property/dir() introspection with no C++ bridge involved.
+Data Assets, Skeletons, IK Rig assets, and animation clips (AnimSequence/AnimMontage/BlendSpace)
+don't have that problem (they're all ordinary reflected UObjects), so those are dumped via plain
+get_editor_property/dir() introspection with no C++ bridge involved. Levels and Level Sequences
+get their own bespoke walks instead (see the Level/LevelSequence generator functions below) since
+their meaningful content - placed actors, streaming setup, Sequencer bindings/tracks - isn't
+exposed as plain top-level UPROPERTYs.
 
 Run from the Unreal Editor Python console:
     import sys
@@ -23,6 +28,14 @@ Output layout (default), type-first:
     Documentation/generated-api/markdown/content/Blueprint/<PluginRoot>/<Name>.md
     Documentation/generated-api/markdown/content/Graph/Project/<Name>.md
     Documentation/generated-api/markdown/content/Graph/<PluginRoot>/<Name>.md
+    Documentation/generated-api/markdown/content/Level/Project/<Name>.md
+    Documentation/generated-api/markdown/content/Level/<PluginRoot>/<Name>.md
+    Documentation/generated-api/markdown/content/Rig/Project/<Name>.md
+    Documentation/generated-api/markdown/content/Rig/<PluginRoot>/<Name>.md
+    Documentation/generated-api/markdown/content/Animation/Project/<Name>.md
+    Documentation/generated-api/markdown/content/Animation/<PluginRoot>/<Name>.md
+    Documentation/generated-api/markdown/content/Sequence/Project/<Name>.md
+    Documentation/generated-api/markdown/content/Sequence/<PluginRoot>/<Name>.md
     Documentation/generated-api/markdown/content/DataAsset/Project/<Name>.md
     Documentation/generated-api/markdown/content/DataAsset/<PluginRoot>/<Name>.md
 
@@ -33,7 +46,26 @@ filenames.
 Asset coverage:
     - Blueprint, WidgetBlueprint, EditorUtilityWidgetBlueprint, AnimBlueprint  -> "Blueprint"
     - PCGGraph, VoxelHeightGraph, VoxelVolumeGraph                            -> "Graph"
+    - World (Levels/maps)                                                    -> "Level"
+    - Skeleton, IKRigDefinition, IKRetargeter                                -> "Rig"
+    - AnimSequence, AnimMontage, BlendSpace (incl. BlendSpace1D,
+      AimOffsetBlendSpace, AimOffsetBlendSpace1D via recursive_classes)      -> "Animation"
+    - LevelSequence                                                         -> "Sequence"
     - Any UDataAsset subclass (includes UPrimaryDataAsset subclasses)        -> "DataAsset"
+
+Note on Control Rig: UControlRigBlueprint is itself a UBlueprint subclass, so CR_*/rig assets
+built as Control Rig Blueprints are already picked up by the recursive "Blueprint" class-path
+scan above and exported through the same Blueprint path (Control Rig's visual graph is backed by
+a real UEdGraph/UEdGraphNode proxy over its RigVM model, so the T3D export bridge applies) - no
+separate handling was added for them here. Their RigVM node classes aren't K2Node_*, so
+_derive_title() falls back to the raw node class name rather than a resolved member name; that
+hasn't been verified against a live export.
+
+Level export note: World assets are loaded like any other asset (not opened as the active editor
+level), so their PersistentLevel.Actors array reflects whatever was serialized directly into the
+map package. World Partition maps keep most actors in external per-actor packages that this
+enumeration won't see - only whatever remains in the persistent level (typically just
+WorldSettings) will show up for those.
 """
 
 import os
@@ -491,6 +523,191 @@ def _generate_voxel_graph_markdown(asset_name, package_path, graph_obj):
 
 
 # ---------------------------------------------------------------------------
+# Level (World) markdown generation
+# ---------------------------------------------------------------------------
+
+def _generate_level_markdown(asset_name, package_path, world_obj):
+    lines = [f"# {asset_name}", "", f"**Path:** `{package_path}`", "**Type:** `World`", ""]
+
+    # World-level properties via the same generic reflected dump used for Data Assets. The
+    # persistent level itself is dropped from this table since its actors get their own section
+    # below (dumping it here would just repeat every actor's path_name as noise).
+    world_props = _dump_object_properties(world_obj)
+    world_props.pop("persistent_level", None)
+    if world_props:
+        lines.append("### World Properties")
+        lines.append("")
+        lines.append("| Property | Value |")
+        lines.append("|----------|-------|")
+        for prop_name in sorted(world_props.keys()):
+            lines.append(f"| `{prop_name}` | {_format_property_value(world_props[prop_name])} |")
+        lines.append("")
+
+    streaming_levels = list(_safe_get_editor_property(world_obj, "streaming_levels", []) or [])
+    lines.append(f"### Streaming Levels ({len(streaming_levels)})")
+    lines.append("")
+    if streaming_levels:
+        lines.append("| Sub-Level | Streaming Class | Should Be Visible | Should Be Loaded |")
+        lines.append("|-----------|------------------|--------------------|-------------------|")
+        for streaming_level in streaming_levels:
+            world_asset = _safe_get_editor_property(streaming_level, "world_asset", None)
+            sub_level_name = world_asset.get_name() if world_asset else "(unknown)"
+            streaming_class = streaming_level.get_class().get_name() if streaming_level else "?"
+            should_be_visible = _safe_get_editor_property(streaming_level, "should_be_visible", "")
+            should_be_loaded = _safe_get_editor_property(streaming_level, "should_be_loaded", "")
+            lines.append(f"| `{sub_level_name}` | `{streaming_class}` | {should_be_visible} | {should_be_loaded} |")
+    else:
+        lines.append("_No streaming sub-levels._")
+    lines.append("")
+
+    # Full per-actor property dump (reuses the DataAsset-style generic reflected dump per actor).
+    # This is intentionally exhaustive per project convention, so large hand-built maps will
+    # produce correspondingly large files here - that's expected, not a bug.
+    persistent_level = _safe_get_editor_property(world_obj, "persistent_level", None)
+    actors = [a for a in (_safe_get_editor_property(persistent_level, "actors", []) or []) if a is not None]
+
+    lines.append(f"### Actors ({len(actors)})")
+    lines.append("")
+    if not actors:
+        lines.append(
+            "_No actors found in the persistent level. World Partition maps store most actors in "
+            "external packages that aren't enumerated by this export._"
+        )
+        lines.append("")
+        return "\n".join(lines)
+
+    for actor in actors:
+        try:
+            label = actor.get_actor_label()
+        except Exception:
+            label = actor.get_name()
+        actor_class = actor.get_class().get_name()
+
+        lines.append(f"#### {label}")
+        lines.append("")
+        lines.append(f"- **Class:** `{actor_class}`")
+        lines.append(f"- **Export Name:** `{actor.get_name()}`")
+
+        actor_props = _dump_object_properties(actor)
+        if actor_props:
+            lines.append("")
+            lines.append("| Property | Value |")
+            lines.append("|----------|-------|")
+            for prop_name in sorted(actor_props.keys()):
+                lines.append(f"| `{prop_name}` | {_format_property_value(actor_props[prop_name])} |")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Level Sequence (Sequencer/cinematics) markdown generation
+# ---------------------------------------------------------------------------
+
+# ULevelSequence's bindings/tracks/sections aren't plain reflected UPROPERTYs (they're accessed
+# through the Sequencer scripting function libraries, hoisted onto UMovieSceneSequence /
+# FMovieSceneBindingProxy / UMovieSceneTrack for Python/Blueprint scripting), so this walks those
+# APIs directly rather than using the generic dir()-based dump.
+def _format_seconds(value):
+    try:
+        return f"{float(value):.3f}s"
+    except Exception:
+        return str(value)
+
+
+def _format_section_range(section):
+    try:
+        has_start = unreal.MovieSceneSectionExtensions.has_start_frame(section)
+        has_end = unreal.MovieSceneSectionExtensions.has_end_frame(section)
+        start = _format_seconds(unreal.MovieSceneSectionExtensions.get_start_frame_seconds(section)) if has_start else "-inf"
+        end = _format_seconds(unreal.MovieSceneSectionExtensions.get_end_frame_seconds(section)) if has_end else "+inf"
+        return f"{start} .. {end}"
+    except Exception:
+        return "(unknown range)"
+
+
+def _format_track_lines(track, indent=""):
+    lines = []
+    track_class = track.get_class().get_name() if track else "UnknownTrack"
+    try:
+        display_name = str(unreal.MovieSceneTrackExtensions.get_display_name(track))
+    except Exception:
+        display_name = ""
+    label = display_name or (track.get_name() if track else "Track")
+    lines.append(f"{indent}- **{label}** (`{track_class}`)")
+
+    try:
+        sections = unreal.MovieSceneTrackExtensions.get_sections(track)
+    except Exception:
+        sections = []
+    for section in sections or []:
+        section_class = section.get_class().get_name() if section else "UnknownSection"
+        lines.append(f"{indent}  - `{section_class}` {_format_section_range(section)}")
+
+    return lines
+
+
+def _generate_level_sequence_markdown(asset_name, package_path, seq_obj):
+    lines = [f"# {asset_name}", "", f"**Path:** `{package_path}`", "**Type:** `LevelSequence`", ""]
+
+    try:
+        start_s = unreal.MovieSceneSequenceExtensions.get_playback_start_seconds(seq_obj)
+        end_s = unreal.MovieSceneSequenceExtensions.get_playback_end_seconds(seq_obj)
+        lines.append(f"- **Playback Range:** {_format_seconds(start_s)} .. {_format_seconds(end_s)}")
+    except Exception:
+        pass
+    try:
+        lines.append(f"- **Display Rate:** {unreal.MovieSceneSequenceExtensions.get_display_rate(seq_obj)}")
+    except Exception:
+        pass
+    lines.append("")
+
+    try:
+        bindings = list(unreal.MovieSceneSequenceExtensions.get_bindings(seq_obj))
+    except Exception:
+        bindings = []
+
+    lines.append(f"### Bindings ({len(bindings)})")
+    lines.append("")
+    if not bindings:
+        lines.append("_No bindings found._")
+    for binding in bindings:
+        try:
+            name = str(unreal.MovieSceneBindingExtensions.get_display_name(binding))
+        except Exception:
+            name = "(unnamed)"
+        try:
+            possessed_class = unreal.MovieSceneBindingExtensions.get_possessed_object_class(binding)
+            class_label = possessed_class.get_name() if possessed_class else "(spawnable/unresolved)"
+        except Exception:
+            class_label = "(unknown)"
+
+        lines.append(f"- **{name}** — `{class_label}`")
+        try:
+            tracks = unreal.MovieSceneBindingExtensions.get_tracks(binding)
+        except Exception:
+            tracks = []
+        for track in tracks or []:
+            lines.extend(_format_track_lines(track, indent="  "))
+    lines.append("")
+
+    try:
+        root_tracks = list(unreal.MovieSceneSequenceExtensions.get_tracks(seq_obj))
+    except Exception:
+        root_tracks = []
+
+    lines.append(f"### Root Tracks ({len(root_tracks)})")
+    lines.append("")
+    if not root_tracks:
+        lines.append("_No root-level tracks found (e.g. Camera Cut, Audio, Event)._")
+    for track in root_tracks:
+        lines.extend(_format_track_lines(track))
+    lines.append("")
+
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
 # Data Asset markdown generation
 # ---------------------------------------------------------------------------
 
@@ -582,6 +799,29 @@ _ADDITIONAL_GRAPH_ASSET_CLASS_PATHS = [
     unreal.TopLevelAssetPath("/Script/Voxel", "VoxelVolumeGraph"),
 ]
 
+# Levels/maps.
+_LEVEL_ASSET_CLASS_PATH = unreal.TopLevelAssetPath("/Script/Engine", "World")
+
+# Rig assets: bone hierarchy (Skeleton) and IK Rig plugin's goal/chain setup (IKRigDefinition) and
+# retarget setup (IKRetargeter). All three are plain reflected UObjects, not graph-based, so they
+# fall through to the generic Data Asset-style dump - only the class-path scan is added here.
+_RIG_ASSET_CLASS_PATHS = [
+    unreal.TopLevelAssetPath("/Script/Engine", "Skeleton"),
+    unreal.TopLevelAssetPath("/Script/IKRig", "IKRigDefinition"),
+    unreal.TopLevelAssetPath("/Script/IKRig", "IKRetargeter"),
+]
+
+# Animation clips. UBlendSpace1D/UAimOffsetBlendSpace/UAimOffsetBlendSpace1D all derive from
+# UBlendSpace, so recursive_classes on "BlendSpace" alone picks up every variant.
+_ANIMATION_CLIP_ASSET_CLASS_PATHS = [
+    unreal.TopLevelAssetPath("/Script/Engine", "AnimSequence"),
+    unreal.TopLevelAssetPath("/Script/Engine", "AnimMontage"),
+    unreal.TopLevelAssetPath("/Script/Engine", "BlendSpace"),
+]
+
+# Sequencer/cinematics.
+_SEQUENCE_ASSET_CLASS_PATH = unreal.TopLevelAssetPath("/Script/LevelSequence", "LevelSequence")
+
 # Any UDataAsset subclass (recursive_classes covers UPrimaryDataAsset and every project/plugin
 # DataAsset subclass, e.g. CRCardDefinition, CRChimeraPreset, CRAnatomyPartData) without having
 # to enumerate them by name.
@@ -593,6 +833,12 @@ _TYPE_BUCKET_BY_KIND = {
     "PCGGraph": "Graph",
     "VoxelHeightGraph": "Graph",
     "VoxelVolumeGraph": "Graph",
+    "World": "Level",
+    "Skeleton": "Rig",
+    "IKRigDefinition": "Rig",
+    "IKRetargeter": "Rig",
+    "AnimationAsset": "Animation",
+    "LevelSequence": "Sequence",
     "DataAsset": "DataAsset",
 }
 
@@ -747,6 +993,10 @@ def export_all_content_docs(output_dir=None, scan_roots=None, exclude_plugins=No
         _ADDITIONAL_GRAPH_ASSET_CLASS_PATHS,
         lambda class_name: class_name if class_name in ("PCGGraph", "VoxelHeightGraph", "VoxelVolumeGraph") else "Graph",
     )
+    _scan([_LEVEL_ASSET_CLASS_PATH], lambda _class_name: "World")
+    _scan(_RIG_ASSET_CLASS_PATHS, lambda class_name: class_name)
+    _scan(_ANIMATION_CLIP_ASSET_CLASS_PATHS, lambda _class_name: "AnimationAsset")
+    _scan([_SEQUENCE_ASSET_CLASS_PATH], lambda _class_name: "LevelSequence")
     _scan([_DATA_ASSET_CLASS_PATH], lambda _class_name: "DataAsset")
 
     assets = [assets_by_package[key] for key in sorted(assets_by_package.keys())]
@@ -754,10 +1004,15 @@ def export_all_content_docs(output_dir=None, scan_roots=None, exclude_plugins=No
     blueprint_count = sum(1 for _, kind in assets if kind == "Blueprint")
     pcg_count = sum(1 for _, kind in assets if kind == "PCGGraph")
     voxel_count = sum(1 for _, kind in assets if kind in ("VoxelHeightGraph", "VoxelVolumeGraph"))
+    level_count = sum(1 for _, kind in assets if kind == "World")
+    rig_count = sum(1 for _, kind in assets if kind in ("Skeleton", "IKRigDefinition", "IKRetargeter"))
+    animation_count = sum(1 for _, kind in assets if kind == "AnimationAsset")
+    sequence_count = sum(1 for _, kind in assets if kind == "LevelSequence")
     data_asset_count = sum(1 for _, kind in assets if kind == "DataAsset")
     unreal.log(
         f"[ContentDocs] Found {len(assets)} total asset(s): "
         f"Blueprint={blueprint_count}, PCGGraph={pcg_count}, VoxelGraphs={voxel_count}, "
+        f"Level={level_count}, Rig={rig_count}, Animation={animation_count}, Sequence={sequence_count}, "
         f"DataAsset={data_asset_count}."
     )
 
@@ -804,7 +1059,14 @@ def export_all_content_docs(output_dir=None, scan_roots=None, exclude_plugins=No
             markdown = _generate_pcg_graph_markdown(asset_name, package_name, obj)
         elif asset_kind in ("VoxelHeightGraph", "VoxelVolumeGraph"):
             markdown = _generate_voxel_graph_markdown(asset_name, package_name, obj)
+        elif asset_kind == "World":
+            markdown = _generate_level_markdown(asset_name, package_name, obj)
+        elif asset_kind == "LevelSequence":
+            markdown = _generate_level_sequence_markdown(asset_name, package_name, obj)
         else:
+            # Skeleton, IKRigDefinition, IKRetargeter, AnimationAsset (AnimSequence/AnimMontage/
+            # BlendSpace family), and DataAsset are all plain reflected UObjects, so the generic
+            # dump covers them without a dedicated generator.
             markdown = _generate_data_asset_markdown(asset_name, package_name, obj)
 
         type_bucket = _TYPE_BUCKET_BY_KIND[asset_kind]
