@@ -17,9 +17,18 @@ tools/
 ├── convert/            # Document format conversion
 ├── python/
 │   ├── assets/         # Asset-related editor automation
-│   └── level/          # Level/world-related automation
+│   ├── level/          # Level/world-related automation
+│   └── editor/         # Editor session control & pipeline auditing
 └── outputs/            # Generated JSON reports (gitignored)
 ```
+
+Three execution contexts, and it matters which is which:
+
+| Context | Where it runs | Scripts |
+|---------|---------------|---------|
+| PowerShell | Terminal, no editor needed | everything under `build/`, `inventory/`, `analysis/*.ps1`, `quality/`, `convert/` |
+| System Python | Terminal, no editor needed | `analysis/uasset_inspect.py`, `python/editor/ue_remote_exec.py` |
+| Editor Python | Inside Unreal, via console or `ue_remote_exec.py` | `python/assets/`, `python/level/`, `python/editor/audit_motion_matching.py` |
 
 ---
 
@@ -69,12 +78,27 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\inventory\list-install
 | `memory-profile-reporter.ps1` | Parse memory profiler dumps, generate size breakdowns by category |
 | `dependency-analyzer.ps1` | Find unused assets, circular dependencies, and broken redirects |
 | `texture-streaming-analyzer.ps1` | Analyze streaming pool usage vs. config, flag oversubscription |
+| `uasset_inspect.py` | **(Python)** Read what a `.uasset` references — name table, asset dependencies, node/class types — without launching the editor |
 
 **Usage:**
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File tools\analysis\find-large-assets.ps1 -ThresholdMB 50 -Top 25
 powershell -NoProfile -ExecutionPolicy Bypass -File tools\analysis\count-assets-by-type.ps1
+
+# uasset_inspect: which animations are in each Pose Search database?
+python tools\analysis\uasset_inspect.py --refs --filter /MyPlugin/Animations --count "Databases\**\*.uasset"
+
+# which gameplay tags does this Chooser filter on?
+python tools\analysis\uasset_inspect.py --grep "State.Locomotion" CT_Locomotion_Master.uasset
+
+# which anim graph node types is this Anim Blueprint built from?
+python tools\analysis\uasset_inspect.py --classes ABP_Character.uasset
 ```
+
+`uasset_inspect` is a reader, not a full parser: it recovers strings (names, paths, class and enum
+identifiers) but not numeric property values. Use it to answer "does A still reference B", "is this
+database actually empty", and "did that editor operation really save" — the last one matters, because
+editor automation can report success without writing to disk.
 
 ### quality/ — Code Quality
 
@@ -93,6 +117,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\quality\source-code-te
 |--------|-------------|
 | `convert_docx_to_pdf.ps1` | Convert `.docx` files to PDF using Microsoft Word (COM automation) |
 | `convert_html_to_pdf.ps1` | Convert `.html` files to PDF using Microsoft Edge headless mode |
+| `convert-markdown-to-pdf.ps1` | Convert a markdown tree to PDF, mirroring its folder structure (headless Edge/Chrome via puppeteer-core). Defaults to `Documentation\generated-api\markdown` -> `...\generated-api\pdf` |
 
 ---
 
@@ -104,6 +129,8 @@ These scripts run **inside the Unreal Editor** via `Edit > Execute Python Script
 
 | Script | Description |
 |--------|-------------|
+| `author_game_modes.py` | **(Editor Python)** Author the whole game mode roster — one `DA_GameMode_*` UI tile plus its paired `UCDGameModeData` per mode — from a single table, dry-run by default. Tags are generalized mechanic names, never shipped names, so re-theming a mode per Part is a `PartDisplayNameOverrides` entry rather than a retag. Mirrors the tile's rule/reward/stake/objective fields off the mode data instead of listing them twice, since `IsDataValid` errors on the two disagreeing. **Restart the editor first** if `Config/Tags/Frontend.ini` changed — the tag table is read at startup |
+| `bulk_move_assets.py` | **(Editor Python)** Relocate many assets between content roots in one reviewed pass, references intact — folder rules + per-asset overrides, dry-run by default. Codifies two traps: `delete_asset` silently leaves git-tracked `.uasset` files on disk, and deleting a redirector strands a phantom package on that name until the editor restarts |
 | `lint_asset_names.py` | Scan Content path and auto-rename assets violating UE5 naming conventions (`T_`, `SM_`, `BP_`, etc.) — supports dry-run |
 | `generate_orm_texture.py` | Create channel-packed ORM texture asset (R=AO, G=Roughness, B=Metallic) from three source textures |
 | `validate-asset-data.py` | Scan Content for broken references, missing materials, orphaned textures, redirect chains |
@@ -128,6 +155,59 @@ blueprint_perf_advisor.analyze_blueprints("/Game/", max_results=20)
 import nativization_recommender
 nativization_recommender.recommend_nativization("/Game/", target_count=10)
 ```
+
+### python/editor/ — Editor Session Control & Pipeline Auditing
+
+| Script | Description |
+|--------|-------------|
+| `ue_remote_exec.py` | **(System Python)** Execute Python inside an *already-running* editor over the Python Remote Execution protocol — no restart, no clicking through the UI |
+| `audit_motion_matching.py` | **(Editor Python)** Validate a Pose Search pipeline end to end: schemas, databases, Chooser routing, unreachable databases, empty databases a Chooser still points at |
+| `wire_trajectory_to_pose_history.py` | **(Editor Python)** Connect an AnimInstance trajectory property to the Pose History node's Trajectory pin — the input motion matching silently fails without |
+| `rebuild_motion_matching_animgraph.py` | **(Editor Python)** Replace a hand-rolled Sequence Player + `MotionMatch` graph with the real Motion Matching node, and splice in a Slot so montages are visible |
+
+**Setup for `ue_remote_exec.py`** — once, in the editor:
+**Edit > Project Settings > Plugins > Python > [x] Enable Remote Execution**. Takes effect
+immediately; no restart required.
+
+**Usage:**
+```powershell
+# what editors are running?
+python tools\python\editor\ue_remote_exec.py --ping
+
+# one-liners
+python tools\python\editor\ue_remote_exec.py --eval "unreal.SystemLibrary.get_engine_version()"
+
+# run an editor script from the terminal, or from CI
+python tools\python\editor\ue_remote_exec.py --file tools\python\editor\audit_motion_matching.py
+python tools\python\editor\ue_remote_exec.py --file tools\python\assets\validate-asset-data.py --json
+```
+
+Exit codes: `0` success, `1` the remote command raised, `2` no editor found / channel refused,
+`3` usage error — so it slots into a build script without parsing output.
+
+**`audit_motion_matching.py` from the editor console:**
+```python
+import sys; sys.path.insert(0, r"A:\Projects\CollateralDamage\WeekendWarriorDevTools\tools\python\editor")
+import audit_motion_matching
+audit_motion_matching.audit("/MyPlugin/Movement/PoseSearch")
+```
+
+Motion matching fails silently — a wrong skeleton, an empty database, or a database no Chooser
+routes to produces a bad pose or reference pose with nothing in the log. This names the asset at
+fault instead.
+
+**Running editor Python with no editor open.** All three editor scripts also work as a commandlet,
+which is how to use them from CI or while the editor is closed:
+
+```powershell
+& "$Engine\Binaries\Win64\UnrealEditor-Cmd.exe" MyProject.uproject `
+    -run=pythonscript -script="...\audit_motion_matching.py" -unattended -nopause -nosplash
+```
+
+Two things to know about that mode. `unreal.log` output does **not** reach stdout under
+`-unattended` — read `Saved/Logs/<Project>.log`, or have the script write its own file. And the
+asset registry is not scanned up front the way it is in an interactive editor, so any script that
+uses `ARFilter` must call `scan_paths_synchronous` first or it will quietly find zero assets.
 
 ### python/level/ — Level/World Automation
 
@@ -192,13 +272,20 @@ Most PowerShell scripts support:
 | UnrealBuildTool | `build/clean-and-regen.ps1` |
 | RunUAT.bat | `build/headless-cook.ps1` |
 | Microsoft Word | `convert/convert_docx_to_pdf.ps1` |
-| Microsoft Edge | `convert/convert_html_to_pdf.ps1` |
+| Microsoft Edge | `convert/convert_html_to_pdf.ps1`, `convert/convert-markdown-to-pdf.ps1` (Chrome also works) |
+| Node.js | `convert/convert_html_to_markdown.ps1`, `convert/convert-markdown-to-pdf.ps1` (npm packages auto-installed) |
 | UE5 Python Editor Script Plugin | `python/` scripts |
+| System Python 3.9+ | `analysis/uasset_inspect.py`, `python/editor/ue_remote_exec.py` (no third-party packages) |
+| Python Remote Execution enabled | `python/editor/ue_remote_exec.py` (Project Settings > Plugins > Python) |
 
 ---
 
 ## Notes
 
+- Run the Python tools from PowerShell, not Git Bash. Git Bash (MSYS) rewrites any argument that
+  starts with `/` into a Windows path, which silently mangles UE package paths — a
+  `--filter /MyPlugin/Animations` becomes a drive path and matches nothing, with no error. Prefix
+  with `MSYS_NO_PATHCONV=1` if you must use Git Bash.
 - All JSON outputs go to `tools/outputs/` (add to `.gitignore`).
 - Scripts are project-agnostic and work with any UE5 project structure.
 - PowerShell scripts auto-detect UE5 engine paths (can be overridden with `-EnginePath`).

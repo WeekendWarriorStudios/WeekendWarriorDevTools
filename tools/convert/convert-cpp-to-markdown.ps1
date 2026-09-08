@@ -35,11 +35,11 @@
 
 .PARAMETER OutputDir
     Directory for -ScanAll batch output.  Defaults to
-    <ProjectRoot>\Documentation\generated-api\source\.
+    <ProjectRoot>\Documentation\generated-api\markdown\source\.
 
 .PARAMETER ContentOutputDir
     Directory for -ScanContent batch output.  Defaults to
-    <ProjectRoot>\Documentation\generated-api\content\.
+    <ProjectRoot>\Documentation\generated-api\markdown\content\.
 
 .PARAMETER ExcludePlugins
     Additional project plugin names to skip during scan (applies to both -ScanAll and -ScanContent).
@@ -849,7 +849,7 @@ if ($ScanAll) {
 
     # Output directory
     if (-not $OutputDir) {
-        $OutputDir = Join-Path $ProjectRoot "Documentation\generated-api\source"
+        $OutputDir = Join-Path $ProjectRoot "Documentation\generated-api\markdown\source"
     }
     Write-Host "Output dir   : $OutputDir`n" -ForegroundColor Cyan
 
@@ -924,7 +924,7 @@ if ($ScanContent) {
     }
 
     if (-not $ContentOutputDir) {
-        $ContentOutputDir = Join-Path $ProjectRoot "Documentation\generated-api\content"
+        $ContentOutputDir = Join-Path $ProjectRoot "Documentation\generated-api\markdown\content"
     }
 
     # PythonScriptCommandlet's -Script= runs exactly one file with no argv, so bridge parameters

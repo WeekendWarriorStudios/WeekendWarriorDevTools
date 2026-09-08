@@ -22,12 +22,21 @@ function Write-Log {
     Write-Verbose $line
 }
 
+$ScriptPath = $MyInvocation.MyCommand.Path
+$ScriptDir = Split-Path -Parent $ScriptPath
+# Tools folder (this script's own home) stays fixed regardless of which project root gets cleaned,
+# so logs/outputs always land next to the tool rather than inside whatever -Root is passed.
+$ToolsDir = Split-Path -Parent $ScriptDir
+
 try {
     if ([string]::IsNullOrWhiteSpace($Root)) {
-        $ScriptPath = $MyInvocation.MyCommand.Path
-        $ScriptDir = Split-Path -Parent $ScriptPath
-        $RepoRoot = Resolve-Path -Path (Join-Path $ScriptDir '..\..') -ErrorAction Stop
+        $RepoRoot = Resolve-Path -Path (Join-Path $ScriptDir '..\..\..') -ErrorAction Stop
         $RepoRoot = $RepoRoot.Path
+        # Fallback for submodule nesting: if no .uproject found, try one level up
+        $uprojectCheck = Get-ChildItem -LiteralPath $RepoRoot -Filter '*.uproject' -File -ErrorAction SilentlyContinue
+        if (-not $uprojectCheck) {
+            $RepoRoot = Split-Path -Parent $RepoRoot
+        }
     } else {
         $RepoRoot = Resolve-Path -Path $Root -ErrorAction Stop
         $RepoRoot = $RepoRoot.Path
@@ -39,11 +48,11 @@ try {
 
 
 # Use a single JSON summary file in tools/outputs instead of a separate CleanupLogs folder
-$outputsDir = Join-Path $RepoRoot 'tools\outputs'
+$outputsDir = Join-Path $ToolsDir 'outputs'
 if (-not (Test-Path -LiteralPath $outputsDir)) { New-Item -ItemType Directory -Path $outputsDir -Force | Out-Null }
 
 # If an old CleanupLogs folder exists, try to merge its summary then remove the folder
-$oldLogDir = Join-Path $RepoRoot 'tools\CleanupLogs'
+$oldLogDir = Join-Path $ToolsDir 'CleanupLogs'
 if (Test-Path -LiteralPath $oldLogDir) {
     $oldSummary = Join-Path $oldLogDir 'cleanup-summary.json'
     if (Test-Path -LiteralPath $oldSummary) {
@@ -93,6 +102,7 @@ $targets = @('Binaries','Intermediate','DerivedDataCache')
 
 $script:removed = @()
 $script:skipped = @()
+$script:previewed = @()
 $script:errors = @()
 $script:PluginInstalledCache = @{}
 
@@ -150,6 +160,7 @@ function Remove-PathSafely {
     if ($DryRun) {
         Write-Log "DRYRUN would remove: $Path"
         $script:skipped += $Path
+        $script:previewed += $Path
         return
     }
 
@@ -161,6 +172,42 @@ function Remove-PathSafely {
         Write-Log "ERROR removing $Path : $_"
         $script:errors += @{ Path = $Path; Error = $_ }
     }
+}
+
+function Show-GroupedPreview {
+    # Prints the folders that would be deleted, grouped by their parent folder,
+    # so a -DryRun pass is easy to scan instead of reading a flat log.
+    param(
+        [string[]]$Paths,
+        [string]$BaseDir
+    )
+
+    if (-not $Paths -or $Paths.Count -eq 0) {
+        Write-Host ""
+        Write-Host "Preview: nothing would be removed."
+        return
+    }
+
+    $baseFull = $null
+    try { $baseFull = (Resolve-Path -LiteralPath $BaseDir -ErrorAction Stop).Path.TrimEnd('\','/') } catch {}
+
+    $groups = $Paths | Group-Object { Split-Path -Parent $_ } | Sort-Object Name
+
+    Write-Host ""
+    Write-Host "Preview: folders that would be deleted, grouped by parent folder:"
+    foreach ($g in $groups) {
+        $parentDisplay = $g.Name
+        if ($baseFull -and $parentDisplay.StartsWith($baseFull, [System.StringComparison]::OrdinalIgnoreCase)) {
+            $rel = $parentDisplay.Substring($baseFull.Length).TrimStart('\','/')
+            if ($rel) { $parentDisplay = $rel }
+        }
+        Write-Host "  $parentDisplay"
+        foreach ($item in ($g.Group | Sort-Object)) {
+            Write-Host "    - $(Split-Path -Leaf $item)"
+        }
+    }
+    Write-Host ""
+    Write-Host "Preview total: $($Paths.Count) folder(s) across $($groups.Count) parent folder(s)."
 }
 
 # remove at repo root
@@ -241,6 +288,10 @@ if ($script:errors.Count -gt 0) {
 
 Write-Log "Cleanup finished"
 
+if ($DryRun) {
+    Show-GroupedPreview -Paths $script:previewed -BaseDir $RepoRoot
+}
+
 $summaryEntry = [ordered]@{
     runAt = (Get-Date).ToString('o')
     repository = $RepoRoot
@@ -256,6 +307,8 @@ $summaryEntry = [ordered]@{
     removedCount = $script:removed.Count
     skipped = $script:skipped
     skippedCount = $script:skipped.Count
+    previewed = $script:previewed
+    previewedCount = $script:previewed.Count
     errors = @()
     errorsCount = 0
     messages = @()
