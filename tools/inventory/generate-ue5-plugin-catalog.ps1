@@ -1,7 +1,17 @@
 ﻿param(
     [string]$EngineRoot = '',
+    [string]$ProjectRoot = '',
     [string]$OutputPath = ''
 )
+
+if (-not $ProjectRoot) {
+    $ProjectRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
+    # Fallback for submodule nesting: if no .uproject found, try one level up
+    $testUproject = Get-ChildItem -LiteralPath $ProjectRoot -Filter '*.uproject' -File -ErrorAction SilentlyContinue
+    if (-not $testUproject) {
+        $ProjectRoot = Split-Path -Parent $ProjectRoot
+    }
+}
 
 if ($EngineRoot) {
     # Accept either the install root (A:\GE\UE_5.8) or the Engine folder inside it.
@@ -47,7 +57,7 @@ else {
 
     # Prefer the version this project is associated with; otherwise take the newest.
     $association = $null
-    $uproject = Get-ChildItem -LiteralPath (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))) -Filter *.uproject -File -ErrorAction SilentlyContinue |
+    $uproject = Get-ChildItem -LiteralPath $ProjectRoot -Filter *.uproject -File -ErrorAction SilentlyContinue |
         Select-Object -First 1
     if ($uproject) {
         $association = (Get-Content -LiteralPath $uproject.FullName -Raw | ConvertFrom-Json).EngineAssociation
@@ -67,7 +77,7 @@ else {
 Write-Host "Using engine root: $EngineRoot"
 
 if (-not $OutputPath) {
-    $outDir = Join-Path $PSScriptRoot 'outputs'
+    $outDir = Join-Path $ProjectRoot 'Documentation\analysis'
     if (-not (Test-Path -LiteralPath $outDir)) { New-Item -ItemType Directory -Path $outDir -Force | Out-Null }
     $OutputPath = Join-Path $outDir 'UE5-Available-Plugins.json'
 }

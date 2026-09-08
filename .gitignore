@@ -1,0 +1,7 @@
+# This repo is cloned into many different projects' <ProjectRoot>/WeekendWarriorDevTools/.
+# Every tool writes its generated reports to <ProjectRoot>/Documentation/ (outside this folder)
+# instead of alongside the scripts, so a project's own scan results never leak into this shared
+# repo. These patterns are a safety net for any script (or manual run) that still writes locally.
+outputs/
+__pycache__/
+*.pyc

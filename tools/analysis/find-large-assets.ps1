@@ -24,7 +24,7 @@ if (-not $ProjectRoot) {
 }
 
 if (-not $OutputPath) {
-    $outDir = Join-Path $PSScriptRoot 'outputs'
+    $outDir = Join-Path $ProjectRoot 'Documentation\analysis'
     if (-not (Test-Path -LiteralPath $outDir)) { New-Item -ItemType Directory -Path $outDir -Force | Out-Null }
     $OutputPath = Join-Path $outDir 'large-assets.json'
 }
