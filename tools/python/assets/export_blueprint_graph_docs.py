@@ -19,7 +19,7 @@ exposed as plain top-level UPROPERTYs.
 
 Run from the Unreal Editor Python console:
     import sys
-    sys.path.insert(0, r"A:\\Projects\\ColossusRising\\WeekendWarriorDevTools\\tools\\python\\assets")
+    sys.path.insert(0, r"C:\\MyProject\\WeekendWarriorDevTools\\tools\\python\\assets")
     import export_blueprint_graph_docs as ebgd
     ebgd.export_all_content_docs()
 
@@ -884,7 +884,7 @@ def _discover_mounted_scan_roots(asset_registry, exclude_plugins=None):
 
 def _project_content_folder_name():
     """The /Game subfolder holding this project's own authored content (matches the .uproject
-    name, e.g. 'ColossusRising'). Other packs dropped directly into Content/ as plain folders
+    name, e.g. 'MyProject'). Other packs dropped directly into Content/ as plain folders
     rather than mounted as real plugins (e.g. Content/FluidNinjaLive, Content/UltraDynamicSky)
     are not this project's content and should get their own bucket instead of 'Project'."""
     uproject_path = unreal.Paths.get_project_file_path()

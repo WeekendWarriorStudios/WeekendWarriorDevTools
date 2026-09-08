@@ -9,17 +9,21 @@ All PowerShell tools are project-agnostic — they accept a `-ProjectRoot` param
 ## Directory Structure
 
 ```
-tools/
-├── build/              # Build & cleanup automation
-├── inventory/          # Asset & plugin inventory & reporting
-├── analysis/           # Asset analysis & metrics
-├── quality/            # Code quality scanning
-├── convert/            # Document format conversion
-├── python/
-│   ├── assets/         # Asset-related editor automation
-│   ├── level/          # Level/world-related automation
-│   └── editor/         # Editor session control & pipeline auditing
-└── outputs/            # Generated JSON reports (gitignored)
+WeekendWarriorDevTools/
+└── tools/
+    ├── build/              # Build & cleanup automation
+    ├── inventory/          # Asset & plugin inventory & reporting
+    ├── analysis/           # Asset analysis & metrics
+    ├── quality/            # Code quality scanning
+    ├── convert/            # Document format conversion
+    └── python/
+        ├── assets/         # Asset-related editor automation
+        ├── level/          # Level/world-related automation
+        └── editor/         # Editor session control & pipeline auditing
+
+<ProjectRoot>/Documentation/     # Generated output — outside this repo, per project (gitignored)
+├── analysis/       # JSON reports from build/inventory/analysis/quality tools
+└── generated-api/  # Markdown/PDF from the convert/ doc generators
 ```
 
 Three execution contexts, and it matters which is which:
@@ -140,7 +144,7 @@ These scripts run **inside the Unreal Editor** via `Edit > Execute Python Script
 **Usage (editor Python console):**
 ```python
 import sys
-sys.path.insert(0, r"A:\Projects\MyGame\tools\python\assets")
+sys.path.insert(0, r"C:\MyProject\WeekendWarriorDevTools\tools\python\assets")
 
 # Validate asset integrity
 import validate_asset_data
@@ -186,7 +190,7 @@ Exit codes: `0` success, `1` the remote command raised, `2` no editor found / ch
 
 **`audit_motion_matching.py` from the editor console:**
 ```python
-import sys; sys.path.insert(0, r"A:\Projects\CollateralDamage\WeekendWarriorDevTools\tools\python\editor")
+import sys; sys.path.insert(0, r"C:\MyProject\WeekendWarriorDevTools\tools\python\editor")
 import audit_motion_matching
 audit_motion_matching.audit("/MyPlugin/Movement/PoseSearch")
 ```
@@ -218,7 +222,7 @@ uses `ARFilter` must call `scan_paths_synchronous` first or it will quietly find
 **Usage (editor Python console):**
 ```python
 import sys
-sys.path.insert(0, r"A:\Projects\MyGame\tools\python\level")
+sys.path.insert(0, r"C:\MyProject\WeekendWarriorDevTools\tools\python\level")
 
 # Analyze world partition efficiency
 import world_partition_analyzer
@@ -241,17 +245,26 @@ Most PowerShell scripts support:
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `-ProjectRoot` | Auto-detected (2 levels above script) | Path to UE5 project root |
-| `-OutputPath` | `tools/outputs/<name>.json` | Where to write JSON output |
+| `-OutputPath` | `<ProjectRoot>/Documentation/analysis/<name>.json` | Where to write JSON output |
 | `-DryRun` | `$false` | Preview changes without modifying |
+
+Every tool writes under `<ProjectRoot>/Documentation/`, never inside this repo's own `tools/`
+folder — this repo is cloned into many projects, so a project's generated reports must stay with
+that project, not leak into (or get overwritten by) another checkout of this shared repo:
+
+| Subfolder | Written by |
+|-----------|------------|
+| `Documentation/analysis/` | `analysis/`, `inventory/`, `quality/`, and `build/clean-untracked.ps1`'s JSON reports |
+| `Documentation/generated-api/` | `convert/convert-cpp-to-markdown.ps1`, `convert-markdown-to-pdf.ps1`, `compact-markdown-docs.ps1` |
 
 ---
 
 ## Setup
 
-1. **Copy or clone** this repo into the root of your UE5 project, or run scripts with explicit `-ProjectRoot`.
-2. **Add to .gitignore:**
+1. **Copy or clone** this repo into `<ProjectRoot>\WeekendWarriorDevTools\`, or run scripts with explicit `-ProjectRoot`.
+2. **Add to your project's .gitignore** (not this repo's — generated reports land in your project, not here):
    ```
-   tools/outputs/
+   Documentation/analysis/
    ```
 3. **Enable Python (optional):** In **Project Settings > Plugins**, search and enable **Python Editor Script Plugin**.
 4. **Schedule cleanup (optional):** Run as Administrator:
@@ -285,6 +298,6 @@ Most PowerShell scripts support:
   starts with `/` into a Windows path, which silently mangles UE package paths — a
   `--filter /MyPlugin/Animations` becomes a drive path and matches nothing, with no error. Prefix
   with `MSYS_NO_PATHCONV=1` if you must use Git Bash.
-- All JSON outputs go to `tools/outputs/` (add to `.gitignore`).
+- All JSON outputs go to `<ProjectRoot>/Documentation/analysis/` (add to your project's `.gitignore`).
 - Scripts are project-agnostic and work with any UE5 project structure.
 - PowerShell scripts auto-detect UE5 engine paths (can be overridden with `-EnginePath`).

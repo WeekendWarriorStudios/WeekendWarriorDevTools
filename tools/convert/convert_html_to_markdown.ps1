@@ -1,5 +1,5 @@
 param(
-    [string]$HtmlDirectory = 'A:\Projects\CollateralDamage\Documentation\collateral-damage-design-documentation',
+    [string]$HtmlDirectory = '',
     [switch]$Force = $false
 )
 

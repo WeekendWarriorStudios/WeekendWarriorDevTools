@@ -4,7 +4,7 @@
 )
 
 if (-not $SourceDirectory) {
-    $SourceDirectory = Join-Path (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))) "Documentation\Quality Documents\00 Technical Standards"
+    $SourceDirectory = Join-Path (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))) "Documentation"
 }
 
 if (-not (Test-Path $SourceDirectory)) {

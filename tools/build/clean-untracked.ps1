@@ -24,9 +24,6 @@ function Write-Log {
 
 $ScriptPath = $MyInvocation.MyCommand.Path
 $ScriptDir = Split-Path -Parent $ScriptPath
-# Tools folder (this script's own home) stays fixed regardless of which project root gets cleaned,
-# so logs/outputs always land next to the tool rather than inside whatever -Root is passed.
-$ToolsDir = Split-Path -Parent $ScriptDir
 
 try {
     if ([string]::IsNullOrWhiteSpace($Root)) {
@@ -47,35 +44,10 @@ try {
 }
 
 
-# Use a single JSON summary file in tools/outputs instead of a separate CleanupLogs folder
-$outputsDir = Join-Path $ToolsDir 'outputs'
+# Reports live under the project being cleaned (-Root), not inside this shared tools repo, so a
+# cleanup summary from one project checkout never leaks into another.
+$outputsDir = Join-Path $RepoRoot 'Documentation\analysis'
 if (-not (Test-Path -LiteralPath $outputsDir)) { New-Item -ItemType Directory -Path $outputsDir -Force | Out-Null }
-
-# If an old CleanupLogs folder exists, try to merge its summary then remove the folder
-$oldLogDir = Join-Path $ToolsDir 'CleanupLogs'
-if (Test-Path -LiteralPath $oldLogDir) {
-    $oldSummary = Join-Path $oldLogDir 'cleanup-summary.json'
-    if (Test-Path -LiteralPath $oldSummary) {
-        try {
-            $existingOutputsSummary = Join-Path $outputsDir 'cleanup-summary.json'
-            $oldText = Get-Content -LiteralPath $oldSummary -Raw -ErrorAction SilentlyContinue
-            $old = @()
-            if ($oldText -and $oldText.Trim()) {
-                try { $old = $oldText | ConvertFrom-Json -ErrorAction Stop } catch { $old = @() }
-            }
-            $outList = @()
-            if (Test-Path -LiteralPath $existingOutputsSummary) {
-                $existingText = Get-Content -LiteralPath $existingOutputsSummary -Raw -ErrorAction SilentlyContinue
-                try { $outList = $existingText | ConvertFrom-Json -ErrorAction Stop } catch { $outList = @() }
-            }
-            if ($old -isnot [System.Array]) { $old = @($old) }
-            if ($outList -isnot [System.Array]) { $outList = @($outList) }
-            $combined = $outList + $old
-            $combined | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $existingOutputsSummary -Encoding UTF8
-        } catch {}
-    }
-    try { Remove-Item -LiteralPath $oldLogDir -Recurse -Force -ErrorAction SilentlyContinue } catch {}
-}
 
 $LastRunFile = Join-Path $outputsDir '.last_cleanup'
 $Today = (Get-Date).ToString('yyyy-MM-dd')
@@ -336,7 +308,7 @@ if ($script:logMessages) { $msgs = $script:logMessages }
 $summaryEntry.messages = $msgs
 $summaryEntry.messagesCount = $msgs.Count
 
-# Write the single canonical summary into tools/outputs/cleanup-summary.json
+# Write the single canonical summary into Documentation\analysis\cleanup-summary.json
 try {
     $outputsSummary = Join-Path $outputsDir 'cleanup-summary.json'
     $outList = @()

@@ -49,8 +49,8 @@ def _resolve_getter_type_id(graph, property_name: str) -> str:
     """Find the node type id for a variable getter.
 
     The id is not simply ``|Get<Name>``: it is namespaced by the property's Blueprint category,
-    so a C++ UPROPERTY declared with ``Category = "CollateralDamage|Locomotion|Trajectory"``
-    becomes ``Variables|CollateralDamage|Locomotion|Trajectory|GetTrajectory``. Discovering it
+    so a C++ UPROPERTY declared with ``Category = "MyGame|Locomotion|Trajectory"``
+    becomes ``Variables|MyGame|Locomotion|Trajectory|GetTrajectory``. Discovering it
     rather than hard-coding it means re-categorising the property in C++ does not break this.
     """
     wanted = f"Get{property_name}"

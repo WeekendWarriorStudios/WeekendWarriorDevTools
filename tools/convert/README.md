@@ -164,7 +164,7 @@ Converts HTML files to PDF using Microsoft Edge headless mode.
 ## Quick Start
 
 ```powershell
-cd a:\Projects\ColossusRising\WeekendWarriorDevTools\tools\convert
+cd C:\MyProject\WeekendWarriorDevTools\tools\convert
 
 # Convert to Markdown
 .\convert_html_to_markdown.ps1

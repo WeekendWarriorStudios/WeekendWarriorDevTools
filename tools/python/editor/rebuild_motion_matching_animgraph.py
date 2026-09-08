@@ -76,7 +76,7 @@ def _create_variable_node(graph, accessor: str, pos):
     """Create a variable getter/setter node, e.g. accessor='GetSelectedDatabase'.
 
     Two id shapes exist and neither covers both cases. A C++ UPROPERTY is namespaced by its
-    Blueprint category (``Variables|CollateralDamage|Locomotion|GetTrajectory``) and *is*
+    Blueprint category (``Variables|MyGame|Locomotion|GetTrajectory``) and *is*
     discoverable through find_node_types. A Blueprint-declared variable uses the bare
     ``|SetSelectedAnim`` form and is not listed by find_node_types at all — so discovery alone
     is not enough, and neither is hard-coding. Try the discovered ids first, then the bare forms.

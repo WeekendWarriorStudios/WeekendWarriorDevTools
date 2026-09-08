@@ -15,10 +15,11 @@ if (-not $ProjectRoot) {
     }
 }
 
-# Always write inventory output under the project documentation reports folder.
-$outDir = Join-Path $ProjectRoot 'Documentation/analysis-reports'
-if (-not (Test-Path -LiteralPath $outDir)) { New-Item -ItemType Directory -Path $outDir -Force | Out-Null }
-$OutputPath = Join-Path $outDir 'animation-assets.json'
+if (-not $OutputPath) {
+    $outDir = Join-Path $ProjectRoot 'Documentation\analysis'
+    if (-not (Test-Path -LiteralPath $outDir)) { New-Item -ItemType Directory -Path $outDir -Force | Out-Null }
+    $OutputPath = Join-Path $outDir 'animation-assets.json'
+}
 
 $contentRoots = [System.Collections.Generic.List[object]]::new()
 $contentRoots.Add([PSCustomObject]@{ Name = '_project'; Path = Join-Path $ProjectRoot 'Content' })

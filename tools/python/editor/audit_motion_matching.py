@@ -21,7 +21,7 @@ Run it
 ------
 From the editor's Python console:
 
-    import sys; sys.path.insert(0, r"A:\\Projects\\CollateralDamage\\WeekendWarriorDevTools\\tools\\python\\editor")
+    import sys; sys.path.insert(0, r"C:\\MyProject\\WeekendWarriorDevTools\\tools\\python\\editor")
     import audit_motion_matching
     audit_motion_matching.audit("/MovementLocomotion/Movement/PoseSearch")
 
