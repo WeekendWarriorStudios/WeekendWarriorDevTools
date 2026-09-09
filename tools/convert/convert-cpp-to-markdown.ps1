@@ -724,14 +724,24 @@ function Find-EnginePluginSourceRoots([string]$ResolvedEnginePath, [string[]]$En
     $excludeSet = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
     foreach ($name in @($ExcludedPluginNames)) { if ($name) { [void]$excludeSet.Add($name) } }
 
+    # One recursive walk of the whole engine Plugins/ tree (900+ .uplugin files across thousands
+    # of folders on a full UE5 install), indexed by base name, instead of re-walking that same
+    # tree once per enabled plugin - the latter turned a dozen-plugin project into a dozen full
+    # tree scans (~5s each) for a ~1s total win of nothing.
+    $upluginIndex = New-Object 'System.Collections.Generic.Dictionary[string,object]' ([System.StringComparer]::OrdinalIgnoreCase)
+    Get-ChildItem -Path $enginePluginsRoot -Filter '*.uplugin' -Recurse -File -ErrorAction SilentlyContinue |
+        ForEach-Object {
+            # First match wins if the same plugin name somehow appears twice under Engine\Plugins.
+            if (-not $upluginIndex.ContainsKey($_.BaseName)) { $upluginIndex[$_.BaseName] = $_ }
+        }
+
     $roots = [System.Collections.Generic.List[PSCustomObject]]::new()
     foreach ($pluginName in @($EnabledPluginNames)) {
         if (-not $pluginName) { continue }
         if ($alreadyFound.Contains($pluginName)) { continue }
         if ($excludeSet.Contains($pluginName)) { continue }
 
-        $upluginFile = Get-ChildItem -Path $enginePluginsRoot -Filter "$pluginName.uplugin" -Recurse -File -ErrorAction SilentlyContinue |
-            Select-Object -First 1
+        $upluginFile = $upluginIndex[$pluginName]
         if (-not $upluginFile) { continue }
 
         $sourceRoot = Join-Path $upluginFile.Directory.FullName "Source"
@@ -790,6 +800,20 @@ if ($ScanAll) {
             $resolvedEngine = ($enginePluginRoots | ForEach-Object { $_.PluginName } | Sort-Object -Unique) -join ", "
             Write-Host "Engine-installed plugin source roots scanned : $resolvedEngine" -ForegroundColor Cyan
             $pluginRoots += $enginePluginRoots
+        }
+
+        # Anything the .uproject enables that still has no source root (neither project-vendored
+        # nor found under Engine\Plugins) is either Content-only (no Source\ folder - nothing to
+        # document) or genuinely missing. Either way, surface it instead of silently dropping it.
+        $excludeSetForReport = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
+        foreach ($n in @($ExcludePlugins)) { if ($n) { [void]$excludeSetForReport.Add($n) } }
+        $coveredNames = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
+        foreach ($n in @($pluginRoots | ForEach-Object { $_.PluginName })) { [void]$coveredNames.Add($n) }
+        $unresolved = @($enabledEnginePlugins | Where-Object {
+            $_ -and -not $coveredNames.Contains($_) -and -not $excludeSetForReport.Contains($_)
+        } | Sort-Object -Unique)
+        if ($unresolved.Count -gt 0) {
+            Write-Host "[WARN] Enabled but no Source\ found (project or engine) - likely Content-only: $($unresolved -join ', ')" -ForegroundColor Yellow
         }
     }
 
