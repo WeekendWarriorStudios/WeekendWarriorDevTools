@@ -155,16 +155,17 @@ def build_powershell_command(tool: dict, params: dict) -> tuple[list[str], str]:
     parts = [f"& {_ps_string_literal(str(script_path))}"]
     for spec in tool.get("params", []):
         name = spec["name"]
-        if name not in params or params[name] in (None, ""):
-            if spec["type"] == "bool" and name in params:
-                pass  # explicit False is meaningful for a switch, handled below
-            else:
-                continue
-        value = params.get(name)
         if spec["type"] == "bool":
-            parts.append(f"-{name}:{_ps_literal(bool(value), 'bool')}")
-        else:
-            parts.append(f"-{name} {_ps_literal(value, spec['type'])}")
+            # Switches are always passed explicitly (-Name:$true / -Name:$false) rather than
+            # only when checked, so a switch whose script default is $true (like
+            # -IncludePlugins) can still be turned off from the form.
+            if name not in params:
+                continue
+            parts.append(f"-{name}:{_ps_literal(bool(params[name]), 'bool')}")
+            continue
+        if name not in params or params[name] in (None, ""):
+            continue
+        parts.append(f"-{name} {_ps_literal(params[name], spec['type'])}")
     command = " ".join(parts)
     argv = ["powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", command]
     return argv, command
@@ -184,8 +185,8 @@ def build_python_cli_command(tool: dict, params: dict) -> tuple[list[str], str]:
         if name not in params or params[name] in (None, ""):
             continue
         value = params[name]
-        flag = spec.get("flags", [f"--{name}"])[0] if spec.get("flags") else f"--{name}"
-        long_flag = next((f for f in spec.get("flags", []) if f.startswith("--")), flag)
+        flags = spec.get("flags") or [f"--{name}"]
+        long_flag = next((f for f in flags if f.startswith("--")), flags[0])
         if spec["type"] == "bool":
             if value:
                 argv.append(long_flag)
@@ -214,11 +215,15 @@ def _display_quote(arg: str) -> str:
 
 
 def _pick_python() -> str:
-    # Prefer the interpreter already running this server; fall back to the Windows launcher.
+    # Prefer the exact interpreter already running this server - it's guaranteed to exist and to
+    # be the one whose stdlib version matches what these scripts were tested against.
     if sys.executable:
         return sys.executable
+    import shutil
     for candidate in ("py", "python", "python3"):
-        return candidate
+        found = shutil.which(candidate)
+        if found:
+            return found
     return "python"
 
 

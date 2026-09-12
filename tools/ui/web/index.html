@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Weekend Warrior Dev Tools</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="app">
+
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="brand">
+        <span class="brand-mark">◆</span>
+        <span class="brand-name">Weekend Warrior <strong>Dev Tools</strong></span>
+      </div>
+      <span class="tool-count" id="toolCount">–</span>
+    </div>
+    <div class="topbar-center">
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 5L20.49 19zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9"/></svg>
+        <input id="searchInput" type="text" placeholder="Search tools… (name, description, category)" autocomplete="off">
+      </div>
+    </div>
+    <div class="topbar-right">
+      <span id="scanStatus" class="scan-status"></span>
+      <button id="rescanBtn" class="btn btn-ghost" title="Re-scan tools/ for new or changed scripts">
+        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4z"/></svg>
+        Rescan
+      </button>
+    </div>
+  </header>
+
+  <div class="category-bar" id="categoryBar"></div>
+
+  <main class="layout">
+    <section class="grid-pane">
+      <div id="grid" class="grid"></div>
+      <div id="emptyState" class="empty-state" hidden>
+        <p>No tools match your search.</p>
+      </div>
+    </section>
+
+    <aside class="detail-pane" id="detailPane">
+      <div class="detail-empty" id="detailEmpty">
+        <div class="detail-empty-icon">◆</div>
+        <p>Select a tool to see what it does and run it.</p>
+      </div>
+
+      <div class="detail-content" id="detailContent" hidden>
+        <div class="detail-header">
+          <div class="detail-kind" id="detailKind"></div>
+          <h2 id="detailTitle"></h2>
+          <div class="detail-path" id="detailPath"></div>
+        </div>
+
+        <p class="detail-summary" id="detailSummary"></p>
+
+        <div id="detailRequiresEditor" class="callout callout-warn" hidden>
+          Requires a running Unreal Editor with <strong>Python Remote Execution</strong> enabled
+          (Project Settings → Plugins → Python). This tool runs inside the editor process, not
+          standalone.
+          <button id="pingBtn" class="btn btn-small" type="button">Test connection</button>
+          <span id="pingResult" class="ping-result"></span>
+        </div>
+
+        <div id="detailNotes"></div>
+
+        <details class="detail-description" id="descriptionBlock">
+          <summary>What this does &amp; how to use it</summary>
+          <pre id="detailDescription"></pre>
+          <div id="detailUsage"></div>
+        </details>
+
+        <div id="entryFunctionRow" class="field-row" hidden>
+          <label for="entryFunctionSelect">Function</label>
+          <select id="entryFunctionSelect"></select>
+        </div>
+
+        <form id="paramForm" class="param-form"></form>
+
+        <div id="constantsBlock" class="constants-block" hidden>
+          <div class="constants-title">Script constants (edit the file to change these)</div>
+          <div id="constantsList" class="constants-list"></div>
+        </div>
+
+        <div class="run-bar">
+          <button id="runBtn" class="btn btn-primary" type="button">▶ Run</button>
+          <button id="cancelBtn" class="btn btn-danger" type="button" hidden>■ Cancel</button>
+          <span id="statusPill" class="status-pill" hidden></span>
+        </div>
+
+        <div id="commandPreview" class="command-preview" hidden>
+          <span class="command-label">Command</span>
+          <code id="commandText"></code>
+        </div>
+
+        <div id="consoleWrap" class="console-wrap" hidden>
+          <div class="console-toolbar">
+            <span>Output</span>
+            <button id="clearConsoleBtn" class="btn btn-small" type="button">Clear</button>
+          </div>
+          <pre id="consoleOutput" class="console-output"></pre>
+        </div>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

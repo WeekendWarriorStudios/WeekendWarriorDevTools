@@ -269,9 +269,11 @@ function ConvertTo-PSParam {
 
 function Get-LeadingCommentBlock {
     # Returns @{ Text = <description text>; NextIndex = <first non-comment line index> }
+    # Skips #Requires/#region directive lines first - otherwise a leading "#Requires -Version
+    # 5.1" gets mistaken for (and stands in as the whole of) the script's description.
     param([string[]]$Lines)
     $i = 0; $n = $Lines.Count
-    while ($i -lt $n -and $Lines[$i].Trim() -eq '') { $i++ }
+    while ($i -lt $n -and ($Lines[$i].Trim() -eq '' -or $Lines[$i].Trim() -match '(?i)^#(requires|region|endregion)\b')) { $i++ }
     if ($i -lt $n -and $Lines[$i].TrimStart().StartsWith('<#')) {
         $buf = New-Object System.Collections.Generic.List[string]
         $first = $Lines[$i].TrimStart()
@@ -301,6 +303,36 @@ function Get-LeadingCommentBlock {
         $i++
     }
     return @{ Text = ($buf -join "`n").Trim(); NextIndex = $i }
+}
+
+function Select-CommentHelpDescription {
+    # Best-effort counterpart to scan_tools.py's _parse_comment_help: if the block uses formal
+    # comment-based help (.SYNOPSIS/.DESCRIPTION/.EXAMPLE/.PARAMETER/...), pull just the
+    # .DESCRIPTION (falling back to .SYNOPSIS) text and any .EXAMPLE lines, instead of dumping
+    # every section header inline. Returns $null for a plain free-text block, so the caller
+    # falls back to using the raw text as-is. Does not wire .PARAMETER help into individual
+    # parameters - Scan-Tools.ps1 is the best-effort fallback; the server always uses
+    # scan_tools.py's fuller AST-based parser.
+    param([string]$Text)
+    $sections = [ordered]@{}
+    $current = $null
+    $found = $false
+    foreach ($line in ($Text -split "`n")) {
+        if ($line.Trim() -match '(?i)^\.(SYNOPSIS|DESCRIPTION|PARAMETER|EXAMPLE|NOTES|INPUTS|OUTPUTS|LINK|COMPONENT|ROLE|FUNCTIONALITY)\b\s*(.*)$') {
+            $found = $true
+            $tag = $Matches[1].ToUpperInvariant()
+            $current = $tag
+            if (-not $sections.Contains($tag)) { $sections[$tag] = New-Object System.Collections.Generic.List[string] }
+            if ($Matches[2].Trim()) { $sections[$tag].Add($Matches[2].Trim()) }
+            continue
+        }
+        if ($current -and $sections.Contains($current)) { $sections[$current].Add($line) }
+    }
+    if (-not $found) { return $null }
+    $desc = if ($sections.Contains('DESCRIPTION')) { ($sections['DESCRIPTION'] -join "`n").Trim() } else { '' }
+    if (-not $desc -and $sections.Contains('SYNOPSIS')) { $desc = ($sections['SYNOPSIS'] -join "`n").Trim() }
+    $examples = if ($sections.Contains('EXAMPLE')) { @($sections['EXAMPLE'] | Where-Object { $_.Trim() -ne '' } | ForEach-Object { $_.Trim() }) } else { @() }
+    return @{ Description = $desc; Usage = $examples }
 }
 
 function Split-DescriptionUsage {
@@ -347,7 +379,12 @@ function Read-PowerShellTool {
     $lines = $raw -split "`r?`n"
 
     $block = Get-LeadingCommentBlock -Lines $lines
-    $split = Split-DescriptionUsage -Text $block.Text
+    $helpSections = Select-CommentHelpDescription -Text $block.Text
+    if ($helpSections) {
+        $split = @{ Description = $helpSections.Description; Usage = $helpSections.Usage }
+    } else {
+        $split = Split-DescriptionUsage -Text $block.Text
+    }
 
     $idx = $block.NextIndex
     while ($idx -lt $lines.Count) {

@@ -16,6 +16,8 @@ WeekendWarriorDevTools/
     ├── analysis/           # Asset analysis & metrics
     ├── quality/            # Code quality scanning
     ├── convert/            # Document format conversion
+    ├── ui/                 # Browser UI: tile grid of every tool below, with a scanner
+    │                       # that auto-detects new ones — see tools/ui/README.md
     └── python/
         ├── assets/         # Asset-related editor automation
         ├── level/          # Level/world-related automation
@@ -33,6 +35,22 @@ Three execution contexts, and it matters which is which:
 | PowerShell | Terminal, no editor needed | everything under `build/`, `inventory/`, `analysis/*.ps1`, `quality/`, `convert/` |
 | System Python | Terminal, no editor needed | `analysis/uasset_inspect.py`, `python/editor/ue_remote_exec.py` |
 | Editor Python | Inside Unreal, via console or `ue_remote_exec.py` | `python/assets/`, `python/level/`, `python/editor/audit_motion_matching.py` |
+
+---
+
+## Dev Tools UI
+
+A browser-based tile grid for every tool in this repo — select one, fill in its parameters from
+a generated form, read what it does, and run it with live streaming output. It re-scans `tools/`
+on startup and on demand, so a new script dropped into any folder above shows up without editing
+anything.
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\ui\Launch-DevToolsUI.ps1
+```
+
+See [`tools/ui/README.md`](tools/ui/README.md) for how tool discovery, parameter parsing, and
+command execution work.
 
 ---
 

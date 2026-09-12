@@ -158,11 +158,19 @@ def _extract_balanced_parens(text: str, open_at: int) -> tuple[str, int]:
     return text[open_at + 1:], len(text)
 
 
+_PS_DIRECTIVE_RE = re.compile(r"^#(requires|region|endregion)\b", re.IGNORECASE)
+
+
 def _leading_comment_block(lines: list[str]) -> tuple[str, int]:
-    """Return (description_text, index_of_first_non_comment_line)."""
+    """Return (description_text, index_of_first_non_comment_line).
+
+    Skips #Requires/#region-style directive lines before looking for the actual doc comment -
+    otherwise a leading ``#Requires -Version 5.1`` gets mistaken for (and stands in as the whole
+    of) the script's description.
+    """
     i = 0
     n = len(lines)
-    while i < n and lines[i].strip() == "":
+    while i < n and (lines[i].strip() == "" or _PS_DIRECTIVE_RE.match(lines[i].strip())):
         i += 1
     if i < n and lines[i].lstrip().startswith("<#"):
         start = i
@@ -195,6 +203,54 @@ def _dedent_comment(text: str) -> str:
     indents = [len(l) - len(l.lstrip()) for l in lines if l.strip()]
     pad = min(indents) if indents else 0
     return "\n".join(l[pad:] if len(l) >= pad else l.strip() for l in lines).strip()
+
+
+_PS_HELP_TAG_RE = re.compile(r"^\.(SYNOPSIS|DESCRIPTION|PARAMETER|EXAMPLE|NOTES|INPUTS|OUTPUTS|LINK|COMPONENT|ROLE|FUNCTIONALITY)\b\s*(.*)$", re.IGNORECASE)
+
+
+def _parse_comment_help(text: str) -> dict | None:
+    """Parse PowerShell formal comment-based help (.SYNOPSIS/.DESCRIPTION/.PARAMETER/.EXAMPLE)
+    out of a doc comment block, if it uses that convention. Returns None for a plain free-text
+    block (find-large-assets.ps1's style), so the caller can fall back to using the raw text."""
+    sections: dict[str, list[str]] = {}
+    param_help: dict[str, str] = {}
+    current_key = None
+    current_param = None
+    found_tag = False
+
+    for line in text.splitlines():
+        m = _PS_HELP_TAG_RE.match(line.strip())
+        if m:
+            found_tag = True
+            tag = m.group(1).upper()
+            rest = m.group(2).strip()
+            if tag == "PARAMETER":
+                current_param = rest.strip()
+                current_key = None
+                param_help[current_param] = ""
+            else:
+                current_key = tag
+                current_param = None
+                sections.setdefault(tag, [])
+                if rest:
+                    sections[tag].append(rest)
+            continue
+        if current_param is not None:
+            param_help[current_param] = (param_help[current_param] + "\n" + line).strip()
+        elif current_key is not None:
+            sections.setdefault(current_key, []).append(line)
+
+    if not found_tag:
+        return None
+
+    description = "\n".join(sections.get("DESCRIPTION", [])).strip()
+    synopsis = "\n".join(sections.get("SYNOPSIS", [])).strip()
+    examples = [e.strip() for e in sections.get("EXAMPLE", []) if e.strip()]
+    return {
+        "description": description or synopsis,
+        "examples": examples,
+        "paramHelp": {k: v.strip() for k, v in param_help.items() if v.strip()},
+    }
 
 
 def _split_description_usage(text: str) -> tuple[str, list[str]]:
@@ -260,7 +316,17 @@ def parse_powershell(path: Path, tools_root: Path) -> dict:
     lines = raw.splitlines()
 
     desc_block, after_idx = _leading_comment_block(lines)
-    description, usage = _split_description_usage(desc_block)
+    help_sections = _parse_comment_help(desc_block)
+    if help_sections:
+        # Formal comment-based help (.SYNOPSIS/.DESCRIPTION/.PARAMETER/.EXAMPLE) - use its
+        # .DESCRIPTION (falling back to .SYNOPSIS) verbatim rather than the whole raw block,
+        # which would otherwise dump every section header inline as plain text.
+        description = help_sections["description"]
+        usage = help_sections["examples"]
+        param_help = help_sections["paramHelp"]
+    else:
+        description, usage = _split_description_usage(desc_block)
+        param_help = {}
 
     # Look for the script's own top-level param(...) block: it must appear before the first
     # real statement (skipping [CmdletBinding()]/attribute lines and blank/comment lines),
@@ -280,7 +346,12 @@ def parse_powershell(path: Path, tools_root: Path) -> dict:
         open_at = rest_text.index("(")
         inner, _ = _extract_balanced_parens(rest_text, open_at)
         for decl in _split_top_level(inner):
-            params.append(_parse_ps_param_decl(decl))
+            spec = _parse_ps_param_decl(decl)
+            # .PARAMETER name lookups are case-insensitive, same as PowerShell itself.
+            spec["help"] = next(
+                (v for k, v in param_help.items() if k.lower() == spec["name"].lower()), ""
+            )
+            params.append(spec)
 
     rel_posix, category, sub_category = _rel_parts(path, tools_root)
     stat = path.stat()
