@@ -11,10 +11,12 @@ a source document (and never gets fed back into a converter or a compaction pass
 Documentation/generated-api/
 ├── markdown/          # source of record
 │   ├── source/        # from convert-cpp-to-markdown.ps1 -ScanAll
-│   └── content/       # from convert-cpp-to-markdown.ps1 -ScanContent
+│   ├── content/       # from convert-cpp-to-markdown.ps1 -ScanContent
+│   └── unreal/        # from convert-udn-to-markdown.ps1
 └── pdf/               # derived output, mirrors markdown/ exactly
     ├── source/
-    └── content/
+    ├── content/
+    └── unreal/
 ```
 
 `pdf/` is git-ignored in that repo: it is reproducible from `markdown/`, and single compacted
@@ -83,6 +85,67 @@ out of a run.
 - **Node.js** (https://nodejs.org/)
 - **Microsoft Edge** or **Google Chrome** (any Chromium build; autodetected)
 - **npm** packages: `marked`, `puppeteer-core` — auto-installed on first run
+
+---
+
+## `convert-udn-to-markdown.ps1`
+
+Converts Unreal Engine's UDN documentation/tooltip source (`Engine\Documentation\Source`,
+shipped with every engine install) to markdown, mirroring the source's folder structure under
+`Documentation/generated-api/markdown/unreal/`.
+
+UDN is Epic's bracket-tag markup that predates the current docs site - it's the same content
+that backs in-editor tooltips. This is a pure-PowerShell parser (no Node/npm dependency): it
+strips the `Key: Value` header block into YAML front matter, turns each named
+`[EXCERPT:Name]`/`[VAR:Name]` fragment into its own heading, renders `[REGION:tip]`-style callout
+boxes as blockquotes, drops author-only `[COMMENT:...]` blocks, and unwraps
+`[PUBLISH:Rocket]`/`[PUBLISH:Licensee]` distribution-channel blocks in place. Everything else
+(bold, bullets, `---` rules, images, links) is already valid markdown and passes through as-is.
+Referenced local images are copied alongside their `.md` (including the `Images\` sibling-folder
+convention most of the source screenshots use) so the generated tree has working image links on
+its own.
+
+### Features
+- **Pure PowerShell** - no Node.js/npm dependency, unlike the other converters here
+- **Mirrors the folder structure** of `Engine\Documentation\Source`
+- **English by default**: only `*.INT.udn` is converted; `-Locales INT,CHN,...` adds Epic's
+  parallel .CHN/.JPN/.KOR translations of the same content
+- **Incremental**: markdown at least as new as its `.udn` is skipped unless `-Force`
+- **Image handling**: copies referenced screenshots next to the generated `.md`, rewriting the
+  link if the image was only found via the `Images\` sibling-folder convention
+
+### Usage
+
+```powershell
+# Default: <EnginePath>\Engine\Documentation\Source -> Documentation\generated-api\markdown\unreal
+.\convert-udn-to-markdown.ps1
+
+# Preview the file list without writing anything
+.\convert-udn-to-markdown.ps1 -DryRun
+
+# Also pull the Chinese/Japanese/Korean translations
+.\convert-udn-to-markdown.ps1 -Locales INT,CHN,JPN,KOR
+
+# Point at a different engine install, re-convert everything
+.\convert-udn-to-markdown.ps1 -EnginePath "D:\UE_5.4" -Force
+```
+
+### Key parameters
+
+| Parameter | Purpose |
+|-----------|---------|
+| `-EnginePath` | Engine install root. Defaults to `A:\GE\UE_5.8` |
+| `-SourceDir` | UDN source root. Defaults to `<EnginePath>\Engine\Documentation\Source` |
+| `-OutputDir` | Markdown output root. Defaults to `Documentation\generated-api\markdown\unreal` |
+| `-Locales` | Locale suffixes to convert. Defaults to `@('INT')` |
+| `-Exclude <globs>` | Source-relative path globs to skip, e.g. `"Shared/Types/**"` |
+| `-Max <n>` | Stop after n conversions - use it before committing to a full run |
+| `-Force` | Re-convert everything, ignoring up-to-date markdown |
+| `-DryRun` | List what would be written; nothing is read or copied |
+
+### Requirements
+
+- None beyond Windows PowerShell 5.1 and a local Unreal Engine install.
 
 ---
 

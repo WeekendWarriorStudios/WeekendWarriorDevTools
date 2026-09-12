@@ -180,10 +180,11 @@ function ConvertTo-UdnBody {
                 continue
             }
 
-            if ($tag -eq 'VAR' -and $name -eq 'ToolTipFullLink') {
-                # Single-value fragment: Epic points a tooltip at its full doc page this way.
-                # Collect the (usually one-line) body and render it as a "See also" note instead
-                # of a heading of its own.
+            if ($tag -eq 'VAR' -and ($name -eq 'ToolTipFullLink' -or $name -eq 'ExcerptAlias')) {
+                # Single-value fragments: consume to the matching [/VAR] and render as one note
+                # line instead of a heading of their own.
+                #   ToolTipFullLink -> points a tooltip at its full doc page.
+                #   ExcerptAlias    -> "this excerpt repeats the named excerpt above verbatim".
                 $j = $i + 1
                 $valueLines = New-Object System.Collections.Generic.List[string]
                 while ($j -lt $Lines.Count -and $Lines[$j] -notmatch $VarCloseRe) {
@@ -191,8 +192,13 @@ function ConvertTo-UdnBody {
                     $j++
                 }
                 if ($valueLines.Count -gt 0) {
+                    $value = $valueLines -join ' '
                     $out.Add("")
-                    $out.Add("*See also: $($valueLines -join ' ')*")
+                    if ($name -eq 'ExcerptAlias') {
+                        $out.Add("*Same as `"$value`" above.*")
+                    } else {
+                        $out.Add("*See also: $value*")
+                    }
                 }
                 $i = $j + 1
                 continue
@@ -379,19 +385,47 @@ foreach ($rec in $records) {
 
     try {
         $markdown = Convert-UdnFile -FullName $rec.FullName -RelPath $rec.RelPath -Locale $rec.Locale
+
+        # Resolve each local image reference against its .udn's own folder first, then against
+        # the sibling "Images\" folder Epic's doc authors conventionally drop screenshots into
+        # (the vast majority of refs here are a bare filename with no path, meant to be found
+        # that way) - rewriting the link when the Images\ convention is what actually resolved it,
+        # so the copied file and its link agree once both land under $OutDir.
+        $resolved = @{}
+        foreach ($m in [regex]::Matches($markdown, $ImageRefRe)) {
+            $imgRel = $m.Groups[1].Value.Trim()
+            if ($resolved.ContainsKey($imgRel) -or $imgRel -match '^\w+://') { continue }
+
+            $direct = Join-Path $rec.SrcDir $imgRel
+            $viaImages = Join-Path (Join-Path $rec.SrcDir 'Images') $imgRel
+            if (Test-Path $direct) {
+                $resolved[$imgRel] = @{ NewRel = $imgRel; Src = $direct }
+            } elseif (Test-Path $viaImages) {
+                $resolved[$imgRel] = @{ NewRel = "Images/$imgRel"; Src = $viaImages }
+            }
+        }
+
+        if ($resolved.Count -gt 0) {
+            $markdown = [regex]::Replace($markdown, $ImageRefRe, {
+                param($match)
+                $imgRel = $match.Groups[1].Value.Trim()
+                if ($resolved.ContainsKey($imgRel)) {
+                    return $match.Value.Substring(0, $match.Value.Length - $match.Groups[1].Value.Length - 1) + $resolved[$imgRel].NewRel + ")"
+                }
+                return $match.Value
+            })
+        }
+
         New-Item -ItemType Directory -Force -Path $rec.OutDir | Out-Null
         Set-Content -LiteralPath $rec.OutPath -Value $markdown -Encoding UTF8 -NoNewline
 
-        foreach ($m in [regex]::Matches($markdown, $ImageRefRe)) {
-            $imgRel = $m.Groups[1].Value.Trim()
-            if ($imgRel -match '^\w+://') { continue }
-            $imgSrc = Join-Path $rec.SrcDir $imgRel
-            if (-not (Test-Path $imgSrc)) { continue }
-            $imgDst = Join-Path $rec.OutDir $imgRel
+        foreach ($imgRel in $resolved.Keys) {
+            $hit = $resolved[$imgRel]
+            $imgDst = Join-Path $rec.OutDir $hit.NewRel
             $imgDstDir = Split-Path -Parent $imgDst
             if ($imgDstDir -and -not (Test-Path $imgDstDir)) { New-Item -ItemType Directory -Force -Path $imgDstDir | Out-Null }
-            if ($Force -or -not (Test-Path $imgDst) -or (Get-Item $imgSrc).LastWriteTimeUtc -gt (Get-Item $imgDst).LastWriteTimeUtc) {
-                Copy-Item -LiteralPath $imgSrc -Destination $imgDst -Force
+            if ($Force -or -not (Test-Path $imgDst) -or (Get-Item $hit.Src).LastWriteTimeUtc -gt (Get-Item $imgDst).LastWriteTimeUtc) {
+                Copy-Item -LiteralPath $hit.Src -Destination $imgDst -Force
                 $imagesCopied++
             }
         }
