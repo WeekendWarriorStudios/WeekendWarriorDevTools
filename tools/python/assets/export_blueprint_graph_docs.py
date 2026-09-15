@@ -848,12 +848,15 @@ def _project_root():
 
 
 def _discover_mounted_scan_roots(asset_registry, exclude_plugins=None):
-    """Discover mounted content/plugin roots that Unreal currently has active.
+    """Discover mounted content/plugin roots that Unreal currently has active, by following
+    the editor's actual mounted package paths. /Game is always included so every project
+    content folder is scanned; non-/Game roots correspond to mounted plugin content such as
+    /Water, /CommonUI, /Voxel, etc.
 
-    This follows the editor's actual mounted package paths instead of guessing from the
-    .uproject or the on-disk Plugins/ tree. /Game is always included so every project content
-    folder is scanned; non-/Game roots correspond to mounted plugin content such as /Water,
-    /CommonUI, /Voxel, etc.
+    This alone can miss a plugin whose content the AssetRegistry hasn't cached anything under
+    yet even though the plugin is enabled (see the search_all_assets(True) comment in
+    export_all_content_docs), so it's combined with _discover_on_disk_plugin_content_roots()
+    below rather than used on its own.
     """
     exclude_plugins = {name.lower() for name in (exclude_plugins or [])}
     roots = set()
@@ -880,6 +883,45 @@ def _discover_mounted_scan_roots(asset_registry, exclude_plugins=None):
         roots.add("/Game")
 
     return sorted(roots)
+
+
+def _discover_on_disk_plugin_content_roots(exclude_plugins=None):
+    """Find every plugin under this project's Plugins/ folder that has a Content folder, by
+    walking the on-disk tree for *.uplugin files, and return their virtual mount roots
+    (e.g. '/GASPALS').
+
+    *.uplugin files aren't necessarily one level down (Plugins/<Name>/<Name>.uplugin) - a
+    plugin pulled in as a git submodule that is itself a mini .uproject, for example, nests
+    its real .uplugin two levels deeper (Plugins/GASPALS/Plugins/GASPALS/GASPALS.uplugin) - so
+    this walks recursively rather than globbing one level. Unreal mounts a plugin's content at
+    '/<PluginName>' where PluginName is the .uplugin's filename (not its folder name or
+    FriendlyName), regardless of how deep the file sits, so that's what's used here too.
+
+    This exists to guarantee every on-disk plugin Content folder is a scan candidate even if
+    _discover_mounted_scan_roots() above didn't (yet) see it in the AssetRegistry cache. A
+    plugin that isn't actually enabled for this editor session still won't yield any assets -
+    ARFilter simply finds nothing under a package path with no real mount behind it - so
+    including it here unconditionally is harmless.
+    """
+    exclude_plugins = {name.lower() for name in (exclude_plugins or [])}
+    plugins_dir = os.path.join(_project_root(), "Plugins")
+    roots = set()
+
+    for dirpath, _dirnames, filenames in os.walk(plugins_dir):
+        if not os.path.isdir(os.path.join(dirpath, "Content")):
+            continue
+
+        for filename in filenames:
+            if not filename.lower().endswith(".uplugin"):
+                continue
+
+            plugin_name = os.path.splitext(filename)[0]
+            if plugin_name.lower() in exclude_plugins:
+                continue
+
+            roots.add(f"/{plugin_name}")
+
+    return roots
 
 
 def _project_content_folder_name():
@@ -953,7 +995,10 @@ def export_all_content_docs(output_dir=None, scan_roots=None, exclude_plugins=No
 
     scan_roots: list of content mount points to scan (e.g. ["/Game", "/Combat"]).
                 Defaults to None, which scans every mounted project-content and active plugin
-                content root currently visible to the Unreal asset registry.
+                content root currently visible to the Unreal asset registry, unioned with the
+                mount root of every Plugins/<PluginName>/Content folder found on disk (see
+                _discover_on_disk_plugin_content_roots) so a plugin isn't silently dropped just
+                because the AssetRegistry hasn't cached anything under it yet.
     """
     if output_dir is None:
         output_dir = os.path.join(_project_root(), "Documentation", "generated-api", "markdown", "content")
@@ -971,7 +1016,10 @@ def export_all_content_docs(output_dir=None, scan_roots=None, exclude_plugins=No
     asset_registry.wait_for_completion()
 
     if scan_roots is None:
-        scan_roots = _discover_mounted_scan_roots(asset_registry, exclude_plugins)
+        scan_roots = sorted(
+            set(_discover_mounted_scan_roots(asset_registry, exclude_plugins))
+            | _discover_on_disk_plugin_content_roots(exclude_plugins)
+        )
 
     editor_asset_subsystem = unreal.get_editor_subsystem(unreal.EditorAssetSubsystem)
 
