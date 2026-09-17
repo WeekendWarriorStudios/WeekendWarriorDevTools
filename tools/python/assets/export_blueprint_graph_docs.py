@@ -17,6 +17,18 @@ get their own bespoke walks instead (see the Level/LevelSequence generator funct
 their meaningful content - placed actors, streaming setup, Sequencer bindings/tracks - isn't
 exposed as plain top-level UPROPERTYs.
 
+Actor Components get exported too, for both placed Level actors and each Blueprint's own
+Components tab, via two different routes:
+  - A placed actor instance has its SCS-instantiated components as real subobjects (SpawnActor
+    runs the full construction chain), so Actor.get_components_by_class() reaches them directly.
+  - A Blueprint asset's Components tab has no Python-reflected data of its own to walk this way:
+    USCS_Node/USimpleConstructionScript carry no BlueprintReadOnly/EditAnywhere UPROPERTYs, so
+    they have zero Python bindings (they don't even show up as empty stub classes). This instead
+    uses SubobjectDataSubsystem/SubobjectDataBlueprintFunctionLibrary - the same Python-exposed
+    API that backs the Blueprint editor's own Components panel - to enumerate every component
+    (native, inherited, and Blueprint-authored), resolve each to its component template object,
+    and walk parent/child attachment via handles.
+
 Run from the Unreal Editor Python console:
     import sys
     sys.path.insert(0, r"C:\\MyProject\\WeekendWarriorDevTools\\tools\\python\\assets")
@@ -351,10 +363,13 @@ def generate_graph_markdown(graph_key, nodes):
     return "\n".join(lines)
 
 
-def generate_blueprint_markdown(blueprint_name, package_path, parent_class_name, graph_texts):
+def generate_blueprint_markdown(blueprint_name, package_path, parent_class_name, graph_texts, blueprint_obj):
     lines = [f"# {blueprint_name}", "", f"**Path:** `{package_path}`"]
     if parent_class_name:
         lines.append(f"**Parent Class:** `{parent_class_name}`")
+    lines.append("")
+
+    lines.extend(generate_components_markdown(_blueprint_component_rows(blueprint_obj), heading_level=2))
     lines.append("")
 
     if not graph_texts:
@@ -597,6 +612,8 @@ def _generate_level_markdown(asset_name, package_path, world_obj):
                 lines.append(f"| `{prop_name}` | {_format_property_value(actor_props[prop_name])} |")
         lines.append("")
 
+        lines.extend(generate_components_markdown(_actor_component_rows(actor), heading_level=5))
+
     return "\n".join(lines)
 
 
@@ -766,6 +783,186 @@ def _generate_data_asset_markdown(asset_name, package_path, obj):
     lines.append("")
 
     return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Component export (Actor Components + a Blueprint's "Components" tab)
+# ---------------------------------------------------------------------------
+
+def _actor_component_rows(actor):
+    """Row dicts (see generate_components_markdown) for every component on a placed actor
+    instance. Real placed actors have their SCS-instantiated components as ordinary subobjects,
+    so this is a plain get_components_by_class() walk - no bridge needed."""
+    try:
+        components = [c for c in actor.get_components_by_class(unreal.ActorComponent) if c]
+    except Exception:
+        components = []
+
+    root_component = _safe_get_editor_property(actor, "root_component")
+
+    rows = []
+    for component in components:
+        parent = ""
+        socket = ""
+        if isinstance(component, unreal.SceneComponent):
+            try:
+                parent_comp = component.get_attach_parent()
+                parent = parent_comp.get_name() if parent_comp else ""
+            except Exception:
+                parent = ""
+            try:
+                socket_name = component.get_attach_socket_name()
+                socket = str(socket_name) if socket_name else ""
+            except Exception:
+                socket = ""
+
+        rows.append({
+            "name": component.get_name(),
+            "class_name": component.get_class().get_name(),
+            "parent": parent,
+            "socket": socket,
+            "origin": "",
+            "extra": "root" if root_component is not None and component == root_component else "",
+            "obj": component,
+        })
+
+    return rows
+
+
+def _blueprint_component_rows(blueprint_obj):
+    """Row dicts (see generate_components_markdown) for a Blueprint's Components tab: every
+    native, inherited, and Blueprint-authored component, via SubobjectDataSubsystem - see the
+    module docstring for why this can't just be a get_editor_property() walk like everything
+    else in this file."""
+    subsystem = unreal.get_engine_subsystem(unreal.SubobjectDataSubsystem)
+    if not subsystem:
+        return []
+
+    lib = unreal.SubobjectDataBlueprintFunctionLibrary
+    try:
+        handles = list(subsystem.k2_gather_subobject_data_for_blueprint(blueprint_obj))
+    except Exception:
+        handles = []
+
+    # variable name -> (SubobjectData, row), so parent names can be resolved in a second pass
+    # regardless of the order children/parents appear in the gathered handle array.
+    data_by_name = {}
+    rows = []
+
+    for handle in handles:
+        try:
+            data = lib.get_data(handle)
+        except Exception:
+            continue
+        if not lib.is_valid(data) or not lib.is_component(data):
+            continue
+
+        name = str(lib.get_variable_name(data))
+
+        try:
+            template = lib.get_object_for_blueprint(data, blueprint_obj)
+        except Exception:
+            template = None
+
+        if lib.is_native_component(data):
+            origin = "Native"
+        elif lib.is_inherited_component(data):
+            origin = "Inherited"
+        else:
+            origin = "Blueprint"
+
+        extra_bits = []
+        if lib.is_root_component(data):
+            extra_bits.append("root")
+        if lib.is_default_scene_root(data):
+            extra_bits.append("default scene root")
+
+        row = {
+            "name": name,
+            "class_name": template.get_class().get_name() if template else "?",
+            "parent": "",
+            "socket": "",
+            "origin": origin,
+            "extra": ", ".join(extra_bits),
+            "obj": template,
+        }
+        rows.append(row)
+        data_by_name[name] = (data, row)
+
+    for data, row in data_by_name.values():
+        try:
+            parent_handle = lib.get_parent_handle(data)
+        except Exception:
+            continue
+        if not lib.is_handle_valid(parent_handle):
+            continue
+        try:
+            parent_data = lib.get_data(parent_handle)
+        except Exception:
+            continue
+        if lib.is_valid(parent_data) and lib.is_component(parent_data):
+            row["parent"] = str(lib.get_variable_name(parent_data))
+
+    return rows
+
+
+def generate_components_markdown(rows, heading_level):
+    """rows: dicts with name/class_name/parent/socket/origin/extra/obj, from
+    _actor_component_rows() or _blueprint_component_rows(). heading_level is the '#' depth of the
+    'Components (N)' section heading; per-component subsections go one level deeper. Origin/Notes
+    columns only appear when at least one row actually uses them (plain actor components never
+    set them), so a Level actor's table doesn't fill up with placeholder dashes."""
+    section_prefix = "#" * heading_level
+    item_prefix = "#" * (heading_level + 1)
+
+    lines = [f"{section_prefix} Components ({len(rows)})", ""]
+    if not rows:
+        lines.append("_No components found._")
+        lines.append("")
+        return lines
+
+    show_origin = any(row["origin"] for row in rows)
+    show_notes = any(row["extra"] for row in rows)
+
+    header = ["Component", "Class", "Attached To", "Socket"]
+    if show_origin:
+        header.append("Origin")
+    if show_notes:
+        header.append("Notes")
+    lines.append("| " + " | ".join(header) + " |")
+    lines.append("|" + "|".join("-" * (len(h) + 2) for h in header) + "|")
+
+    for row in rows:
+        cells = [row["name"], f"`{row['class_name']}`", row["parent"] or "-", row["socket"] or "-"]
+        if show_origin:
+            cells.append(row["origin"] or "-")
+        if show_notes:
+            cells.append(row["extra"] or "-")
+        lines.append("| " + " | ".join(cells) + " |")
+    lines.append("")
+
+    for row in rows:
+        lines.append(f"{item_prefix} {row['name']}")
+        lines.append("")
+        lines.append(f"- **Class:** `{row['class_name']}`")
+        if row["parent"]:
+            socket_suffix = f" (socket `{row['socket']}`)" if row["socket"] else ""
+            lines.append(f"- **Attached To:** `{row['parent']}`{socket_suffix}")
+        if row["origin"]:
+            lines.append(f"- **Origin:** {row['origin']}")
+        if row["extra"]:
+            lines.append(f"- **Notes:** {row['extra']}")
+
+        comp_props = _dump_object_properties(row["obj"]) if row["obj"] else {}
+        if comp_props:
+            lines.append("")
+            lines.append("| Property | Value |")
+            lines.append("|----------|-------|")
+            for prop_name in sorted(comp_props.keys()):
+                lines.append(f"| `{prop_name}` | {_format_property_value(comp_props[prop_name])} |")
+        lines.append("")
+
+    return lines
 
 
 # ---------------------------------------------------------------------------
@@ -1102,7 +1299,7 @@ def export_all_content_docs(output_dir=None, scan_roots=None, exclude_plugins=No
             except Exception:
                 pass
 
-            markdown = generate_blueprint_markdown(asset_name, package_name, parent_class_name, graph_texts)
+            markdown = generate_blueprint_markdown(asset_name, package_name, parent_class_name, graph_texts, obj)
         elif asset_kind == "PCGGraph":
             markdown = _generate_pcg_graph_markdown(asset_name, package_name, obj)
         elif asset_kind in ("VoxelHeightGraph", "VoxelVolumeGraph"):
