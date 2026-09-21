@@ -1,206 +1,278 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Converts C++ header (and matching .cpp) files to structured markdown documentation.
+    Converts Unreal Engine C++ headers and reflected content assets into Markdown documentation.
 
 .DESCRIPTION
-    Single-file mode: parse one .h and write one .md.
-    Source scan mode (-ScanAll): discover every .h under project Source/ and all project plugin
-    Source/ roots (recursively), skip Intermediate/Binaries/generated files, and write
-    markdown to -OutputDir using flat project/plugin buckets. Also covers plugins the .uproject
-    enables that have no project-level Plugins/<Name>/Source (e.g. a Marketplace plugin like
-    Voxel, installed engine-wide with only a Content-only stub left in the project) by pulling
-    their source from -EnginePath instead.
-    Content scan mode (-ScanContent): launch the Unreal Editor headlessly (PythonScriptCommandlet)
-    to scan every Blueprint, PCG/Voxel graph, and Data Asset, and write markdown to
-    -ContentOutputDir using flat <type>/<project-or-plugin> buckets. Requires the engine, since
-    .uasset internals (Blueprint graph wiring in particular) are only reachable through the
-    running editor's reflection/asset-registry APIs, not by parsing the binary file on disk.
+    Supports three workflows:
+
+    1. Single-file mode
+       Parses one C++ header and writes one Markdown file.
+
+    2. Source scan mode (-ScanAll)
+       Scans the project's Source folder and every enabled plugin with a C++ Source folder.
+       Plugin discovery includes:
+         - Plugins located anywhere beneath the project root
+         - Engine-installed plugins beneath Engine\Plugins
+         - Plugins explicitly enabled in the .uproject
+         - Enabled plugin dependencies declared in .uplugin files
+
+    3. Content scan mode (-ScanContent)
+       Runs UnrealEditor-Cmd.exe with a Python bootstrap to export documentation for
+       Blueprints, graph assets, and Data Assets.
 
 .PARAMETER HeaderFile
-    Path to a single .h file (single-file mode).
+    Header to convert in single-file mode.
 
 .PARAMETER Output
-    Output .md path for single-file mode.  Defaults to same dir/name as the header.
+    Markdown output path in single-file mode.
 
 .PARAMETER ScanAll
-    Scan Source/ and Plugins/GameFeatures/ for all .h files and batch-convert them.
+    Recursively scan project and enabled-plugin C++ headers.
 
 .PARAMETER ScanContent
-    Scan all Blueprints, PCG/Voxel graphs, and Data Assets (via a headless editor run) and
-    batch-convert them to markdown.  Can be combined with -ScanAll in the same invocation.
+    Run the Unreal content documentation exporter.
 
 .PARAMETER ProjectRoot
-    UE project root directory.  Auto-detected from nearest .uproject when omitted.
+    Project directory containing the .uproject file. Auto-detected when omitted.
 
 .PARAMETER OutputDir
-    Directory for -ScanAll batch output.  Defaults to
-    <ProjectRoot>\Documentation\generated-api\markdown\source\.
+    Source documentation output directory.
 
 .PARAMETER ContentOutputDir
-    Directory for -ScanContent batch output.  Defaults to
-    <ProjectRoot>\Documentation\generated-api\markdown\content\.
+    Content documentation output directory.
 
 .PARAMETER ExcludePlugins
-    Additional project plugin names to skip during scan (applies to both -ScanAll and -ScanContent).
+    Plugin names to exclude from source and content scans.
 
 .PARAMETER EnginePath
-    Root of the Unreal Engine install (folder containing Engine\Binaries\...).  Used by
-    -ScanContent to locate UnrealEditor-Cmd.exe, and by -ScanAll to find source for enabled
-    plugins that aren't vendored under the project's own Plugins\ folder.  Defaults to
-    "A:\GE\UE_5.8".
+    Unreal Engine installation root containing Engine\Binaries and Engine\Plugins.
+
+.PARAMETER ContentExporterScript
+    Optional explicit path to export_blueprint_graph_docs.py.
 
 .PARAMETER DryRun
-    With -ScanContent, print the editor command line that would run instead of launching it.
+    Reports source scan actions without writing Markdown. For content scans, prints the
+    Unreal Editor command without running it.
 
 .EXAMPLE
-    .\convert-cpp-to-markdown.ps1 "Plugins\GF_Traversal\CRChaosMoverComponent.h"
-    .\convert-cpp-to-markdown.ps1 "Source\MyClass.h" -Output "Docs\MyClass.md"
-    .\convert-cpp-to-markdown.ps1 -ScanAll
-    .\convert-cpp-to-markdown.ps1 -ScanAll -OutputDir "Docs\API" -ExcludePlugins CommonUI
-    .\convert-cpp-to-markdown.ps1 -ScanContent
-    .\convert-cpp-to-markdown.ps1 -ScanAll -ScanContent
+    .\convert-cpp-to-markdown.ps1 -ScanAll -ProjectRoot "A:\MyProject" -EnginePath "A:\GE\UE_5.8"
+
+.EXAMPLE
+    .\convert-cpp-to-markdown.ps1 -ScanAll -DryRun
+
+.EXAMPLE
+    .\convert-cpp-to-markdown.ps1 -ScanContent -DryRun
+
+.EXAMPLE
+    .\convert-cpp-to-markdown.ps1 "Source\MyProject\Public\MyClass.h"
 #>
+[CmdletBinding()]
 param(
     [Parameter(Position = 0)]
     [string]$HeaderFile = "",
 
     [string]$Output = "",
-
     [switch]$ScanAll,
-
     [switch]$ScanContent,
-
     [string]$ProjectRoot = "",
-
     [string]$OutputDir = "",
-
     [string]$ContentOutputDir = "",
-
     [string[]]$ExcludePlugins = @(),
-
     [string]$EnginePath = "A:\GE\UE_5.8",
-
+    [string]$ContentExporterScript = "",
     [switch]$DryRun
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
-
-# Backtick character for markdown code-spans without confusing PS5.1 parser
 $BT = [char]96
 
+# -----------------------------------------------------------------------------
+# General helpers
+# -----------------------------------------------------------------------------
+
+function Write-Section([string]$Text) {
+    Write-Host ""
+    Write-Host $Text -ForegroundColor Cyan
+    Write-Host ("-" * $Text.Length) -ForegroundColor DarkCyan
+}
+
+function New-CaseInsensitiveSet {
+    return New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
+}
+
+function Test-PathHasExcludedSegment([string]$Path, [string[]]$Segments) {
+    foreach ($segment in @($Segments)) {
+        if (-not $segment) { continue }
+        $escaped = [regex]::Escape($segment)
+        if ($Path -match "[\\/]$escaped[\\/]") { return $true }
+    }
+    return $false
+}
+
+function Get-NormalizedFullPath([string]$Path) {
+    return [System.IO.Path]::GetFullPath($Path).TrimEnd('\', '/')
+}
+
+function Get-RelativePathCompat([string]$BasePath, [string]$TargetPath) {
+    $base = Get-NormalizedFullPath $BasePath
+    $target = Get-NormalizedFullPath $TargetPath
+
+    if ($target.StartsWith($base, [System.StringComparison]::OrdinalIgnoreCase)) {
+        return $target.Substring($base.Length).TrimStart('\', '/')
+    }
+
+    return $target
+}
+
+function Find-ProjectRoot([string]$StartDir) {
+    $dir = Get-NormalizedFullPath $StartDir
+
+    while ($dir) {
+        $uprojects = @(Get-ChildItem -LiteralPath $dir -Filter '*.uproject' -File -ErrorAction SilentlyContinue)
+        if ($uprojects.Count -gt 0) { return $dir }
+
+        $parent = Split-Path -Parent $dir
+        if (-not $parent -or $parent -eq $dir) { break }
+        $dir = $parent
+    }
+
+    return ""
+}
+
+function Get-UProjectPath([string]$ResolvedProjectRoot) {
+    $files = @(Get-ChildItem -LiteralPath $ResolvedProjectRoot -Filter '*.uproject' -File -ErrorAction SilentlyContinue)
+
+    if ($files.Count -eq 0) {
+        throw "No .uproject file was found directly under '$ResolvedProjectRoot'."
+    }
+
+    if ($files.Count -gt 1) {
+        Write-Host "[WARN] Multiple .uproject files found. Using '$($files[0].Name)'." -ForegroundColor Yellow
+    }
+
+    return $files[0].FullName
+}
+
+function Resolve-ProjectRoot {
+    if ($script:ProjectRoot) {
+        if (-not (Test-Path -LiteralPath $script:ProjectRoot -PathType Container)) {
+            throw "ProjectRoot does not exist: $script:ProjectRoot"
+        }
+        $script:ProjectRoot = (Resolve-Path -LiteralPath $script:ProjectRoot).Path
+    }
+    else {
+        $script:ProjectRoot = Find-ProjectRoot (Get-Location).Path
+        if (-not $script:ProjectRoot) {
+            throw "Could not locate a .uproject file. Pass -ProjectRoot explicitly."
+        }
+    }
+
+    return $script:ProjectRoot
+}
+
+# -----------------------------------------------------------------------------
+# C++ parsing helpers
+# -----------------------------------------------------------------------------
+
 function Join-CommentLines([System.Collections.Generic.List[string]]$Lines) {
-    return ($Lines | Where-Object { $_.Trim() } | ForEach-Object { $_.Trim() }) -join " "
+    return (($Lines | Where-Object { $_.Trim() } | ForEach-Object { $_.Trim() }) -join ' ')
 }
 
 function Count-Char([string]$Str, [char]$Ch) {
     $count = 0
-    foreach ($c in $Str.ToCharArray()) { if ($c -eq $Ch) { $count++ } }
+    foreach ($c in $Str.ToCharArray()) {
+        if ($c -eq $Ch) { $count++ }
+    }
     return $count
 }
 
-# Reads a macro that may span lines until its outer parens are balanced.
-# Updates $EndIndex (by-ref) to the last line consumed.
-function Read-MacroBlock([string[]]$Lines, [int]$StartIdx, [ref]$EndIdx) {
-    $macro = $Lines[$StartIdx].Trim()
-    $j     = $StartIdx
-    $opens  = Count-Char $macro '('
+function Read-MacroBlock([string[]]$Lines, [int]$StartIndex, [ref]$EndIndex) {
+    $macro = $Lines[$StartIndex].Trim()
+    $cursor = $StartIndex
+    $opens = Count-Char $macro '('
     $closes = Count-Char $macro ')'
-    while ($opens -gt $closes -and ($j + 1) -lt $Lines.Count) {
-        $j++
-        $macro += " " + $Lines[$j].Trim()
-        $opens  = Count-Char $macro '('
+
+    while ($opens -gt $closes -and ($cursor + 1) -lt $Lines.Count) {
+        $cursor++
+        $macro += ' ' + $Lines[$cursor].Trim()
+        $opens = Count-Char $macro '('
         $closes = Count-Char $macro ')'
     }
-    $EndIdx.Value = $j
+
+    $EndIndex.Value = $cursor
     return $macro
 }
 
-# Gets the argument string from inside the outermost parens of a macro call.
 function Get-MacroArgs([string]$Macro) {
     $start = $Macro.IndexOf('(')
     if ($start -lt 0) { return "" }
-    $d = 0
-    for ($k = $start; $k -lt $Macro.Length; $k++) {
-        if ($Macro[$k] -eq '(') { $d++ }
-        elseif ($Macro[$k] -eq ')') {
-            $d--
-            if ($d -eq 0) { return $Macro.Substring($start + 1, $k - $start - 1) }
+
+    $depth = 0
+    for ($i = $start; $i -lt $Macro.Length; $i++) {
+        if ($Macro[$i] -eq '(') { $depth++ }
+        elseif ($Macro[$i] -eq ')') {
+            $depth--
+            if ($depth -eq 0) {
+                return $Macro.Substring($start + 1, $i - $start - 1)
+            }
         }
     }
+
     return $Macro.Substring($start + 1)
 }
 
-# ---------------------------------------------------------------------------
-# Member parsers
-# ---------------------------------------------------------------------------
-
 function Parse-MethodDecl([string]$Decl, [string]$Access, [string]$Comment, [string]$Macro) {
     $ueSpecs = ""
-    if ($Macro -match '^UFUNCTION\s*\(([^)]*)\)') { $ueSpecs = $Matches[1].Trim() }
+    if ($Macro -match '^UFUNCTION\s*\((.*)\)$') { $ueSpecs = $Matches[1].Trim() }
 
-    # Remove inline body and trailing ;
-    $clean = $Decl -replace '\s*\{[^}]*\}\s*;?\s*$', ''
-    $clean = $clean -replace '\s*=\s*0\s*;?\s*$', ''
+    $clean = $Decl -replace '\s*\{[^{}]*\}\s*;?\s*$', ''
+    $clean = $clean -replace '\s*=\s*(0|default|delete)\s*;?\s*$', ''
     $clean = $clean -replace ';\s*$', ''
     $clean = $clean.Trim()
 
-    if ($clean -match '^DECLARE_') { return $null }
+    if (-not $clean -or $clean -match '^DECLARE_') { return $null }
 
-    # Strip trailing qualifiers: const, override, final
-    $quals = [System.Collections.Generic.List[string]]::new()
-    foreach ($q in @('final', 'override', 'const')) {
-        if ($clean -match "(?<=\))\s+$q\s*$") {
-            $quals.Insert(0, $q) | Out-Null
-            $clean = $clean -replace "(?<=\))\s+$q\s*$", ''
-            $clean = $clean.Trim()
-        }
+    $qualifiers = [System.Collections.Generic.List[string]]::new()
+    $qualifierPattern = '(?<=\))\s+(const|override|final|noexcept)\s*$'
+
+    while ($clean -match $qualifierPattern) {
+        $qualifiers.Insert(0, $Matches[1])
+        $clean = ($clean -replace $qualifierPattern, '').Trim()
     }
 
-    # Match:  [leading-mods]  ReturnType  MethodName(Params)
-    if ($clean -match '^(.*?)\s+(\w+)\s*\(([^)]*)\)\s*$') {
+    if ($clean -match '^(.*?)\s+([~\w]+)\s*\((.*)\)\s*$') {
         $prefixReturn = $Matches[1].Trim()
-        $methodName   = $Matches[2]
-        $params       = $Matches[3].Trim()
-
-        $mods = [System.Collections.Generic.List[string]]::new()
+        $methodName = $Matches[2]
+        $parameters = $Matches[3].Trim()
+        $modifiers = [System.Collections.Generic.List[string]]::new()
         $returnType = $prefixReturn
-        foreach ($mod in @('virtual','static','inline','FORCEINLINE','FORCENOINLINE','explicit','UE_NODISCARD','NODISCARD')) {
-            while ($returnType -match "^$mod\b(.*)") {
-                $mods.Add($mod) | Out-Null
+
+        foreach ($modifier in @('virtual', 'static', 'inline', 'FORCEINLINE', 'FORCENOINLINE', 'explicit', 'constexpr', 'UE_NODISCARD', 'NODISCARD')) {
+            while ($returnType -match "^$modifier\b(.*)$") {
+                $modifiers.Add($modifier)
                 $returnType = $Matches[1].Trim()
             }
         }
 
-        $sig = "$returnType $methodName($params)"
-        if ($quals.Count -gt 0) { $sig += " " + ($quals -join " ") }
+        $signature = "$returnType $methodName($parameters)".Trim()
+        if ($qualifiers.Count -gt 0) { $signature += ' ' + ($qualifiers -join ' ') }
 
         return [PSCustomObject]@{
-            Kind         = "method"
-            Name         = $methodName
-            Signature    = $sig.Trim()
-            ReturnType   = $returnType
-            Params       = $params
-            Modifiers    = ($mods -join ", ")
-            Access       = $Access
-            Comment      = $Comment
-            UESpecifiers = $ueSpecs
+            Kind = 'method'; Name = $methodName; Signature = $signature
+            ReturnType = $returnType; Params = $parameters
+            Modifiers = ($modifiers -join ', '); Access = $Access
+            Comment = $Comment; UESpecifiers = $ueSpecs
         }
     }
 
-    # Constructor / destructor (no return type)
-    if ($clean -match '^([\w~<>]+)\s*\(([^)]*)\)\s*$') {
+    if ($clean -match '^([~\w<>]+)\s*\((.*)\)\s*$') {
         return [PSCustomObject]@{
-            Kind         = "method"
-            Name         = $Matches[1]
-            Signature    = "$($Matches[1])($($Matches[2].Trim()))"
-            ReturnType   = ""
-            Params       = $Matches[2].Trim()
-            Modifiers    = ""
-            Access       = $Access
-            Comment      = $Comment
-            UESpecifiers = $ueSpecs
+            Kind = 'method'; Name = $Matches[1]
+            Signature = "$($Matches[1])($($Matches[2].Trim()))"
+            ReturnType = ''; Params = $Matches[2].Trim(); Modifiers = ''
+            Access = $Access; Comment = $Comment; UESpecifiers = $ueSpecs
         }
     }
 
@@ -209,241 +281,177 @@ function Parse-MethodDecl([string]$Decl, [string]$Access, [string]$Comment, [str
 
 function Parse-PropertyDecl([string]$Decl, [string]$Access, [string]$Comment, [string]$Macro) {
     $ueSpecs = ""
-    if ($Macro -match '^UPROPERTY\s*\(([^)]*)\)') { $ueSpecs = $Matches[1].Trim() }
+    if ($Macro -match '^UPROPERTY\s*\((.*)\)$') { $ueSpecs = $Matches[1].Trim() }
 
-    # Remove default value, bit-field size, trailing ;
     $clean = $Decl -replace '\s*=\s*[^;,]*', ''
     $clean = $clean -replace '\s*:\s*\d+', ''
     $clean = $clean -replace ';\s*$', ''
     $clean = $clean.Trim()
 
-    # Last word is the property name; everything before is the type
-    if ($clean -match '^(.*?)\s+(\w+)\s*$') {
-        $propType = $Matches[1].Trim()
-        $propName = $Matches[2]
+    if ($clean -match '^(.*?)\s+([A-Za-z_]\w*)\s*(\[[^\]]*\])?\s*$') {
+        $propertyType = $Matches[1].Trim()
+        $propertyName = $Matches[2]
+        if ($Matches[3]) { $propertyType += $Matches[3] }
 
-        if (-not $propType -or -not $propName) { return $null }
-        if ($propName -match '^(class|struct|enum|typename|friend)$') { return $null }
+        if (-not $propertyType -or $propertyName -match '^(class|struct|enum|typename|friend)$') {
+            return $null
+        }
 
         return [PSCustomObject]@{
-            Kind         = "property"
-            Name         = $propName
-            Type         = $propType
-            Access       = $Access
-            Comment      = $Comment
-            UESpecifiers = $ueSpecs
+            Kind = 'property'; Name = $propertyName; Type = $propertyType
+            Access = $Access; Comment = $Comment; UESpecifiers = $ueSpecs
         }
     }
+
     return $null
 }
 
-# ---------------------------------------------------------------------------
-# Header parser
-# ---------------------------------------------------------------------------
-
 function Parse-Header([string]$Path) {
-    $raw = Get-Content $Path -Encoding UTF8
-    $n   = $raw.Count
+    $raw = @(Get-Content -LiteralPath $Path -Encoding UTF8)
     $types = [System.Collections.Generic.List[PSCustomObject]]::new()
-
-    # State: "top" | "awaitingBrace" | "inType"
-    $state         = "top"
-    $depth         = 0
-    $currentType   = $null
-    $currentAccess = "private"
-
-    $pendingComment      = [System.Collections.Generic.List[string]]::new()
-    $pendingMacro        = ""
-    $pendingTypeSpec     = ""
+    $state = 'top'
+    $depth = 0
+    $currentType = $null
+    $currentAccess = 'private'
+    $pendingComment = [System.Collections.Generic.List[string]]::new()
+    $pendingMacro = ""
+    $pendingTypeSpec = ""
     $pendingTypeSpecArgs = ""
-
     $inBlockComment = $false
-    $blockBuf       = [System.Collections.Generic.List[string]]::new()
-
+    $blockBuffer = [System.Collections.Generic.List[string]]::new()
     $i = 0
-    while ($i -lt $n) {
-        $line    = $raw[$i]
-        $trimmed = $line.Trim()
 
-        # -- Block comment (inside) ------------------------------------------
+    while ($i -lt $raw.Count) {
+        $trimmed = $raw[$i].Trim()
+
         if ($inBlockComment) {
             if ($trimmed -match '\*/') {
-                $inBlockComment = $false
                 $before = ($trimmed -split '\*/', 2)[0] -replace '^\*+\s*', ''
-                if ($before.Trim()) { $pendingComment.Add($before.Trim()) | Out-Null }
-                foreach ($bl in $blockBuf) { $pendingComment.Add($bl) | Out-Null }
-                $blockBuf.Clear()
-            } else {
+                if ($before.Trim()) { $blockBuffer.Add($before.Trim()) }
+                foreach ($line in $blockBuffer) { $pendingComment.Add($line) }
+                $blockBuffer.Clear()
+                $inBlockComment = $false
+            }
+            else {
                 $content = $trimmed -replace '^\*+\s*', ''
-                if ($content) { $blockBuf.Add($content) | Out-Null }
+                if ($content) { $blockBuffer.Add($content) }
             }
             $i++; continue
         }
 
-        # -- Block comment (open) -------------------------------------------
         if ($trimmed -match '^/\*') {
             if ($trimmed -match '^/\*.*\*/') {
                 $content = $trimmed -replace '^/\*+\s*', '' -replace '\s*\*/.*$', ''
-                if ($content.Trim()) { $pendingComment.Add($content.Trim()) | Out-Null }
-            } else {
+                if ($content.Trim()) { $pendingComment.Add($content.Trim()) }
+            }
+            else {
                 $inBlockComment = $true
-                $blockBuf.Clear()
+                $blockBuffer.Clear()
                 $content = $trimmed -replace '^/\*+\s*', ''
-                if ($content.Trim()) { $blockBuf.Add($content.Trim()) | Out-Null }
+                if ($content.Trim()) { $blockBuffer.Add($content.Trim()) }
             }
             $i++; continue
         }
 
-        # -- Line comment ---------------------------------------------------
         if ($trimmed -match '^//') {
-            # Section divider lines (// ---  or // ===) are decorative; skip
-            if ($trimmed -match '^//\s*[-=]{3,}') { $i++; continue }
-            $content = $trimmed -replace '^//\s*', ''
-            $pendingComment.Add($content) | Out-Null
+            if ($trimmed -notmatch '^//\s*[-=]{3,}') {
+                $pendingComment.Add(($trimmed -replace '^//\s*', ''))
+            }
             $i++; continue
         }
 
-        # -- Blank line -----------------------------------------------------
         if (-not $trimmed) {
             if (-not $pendingMacro) { $pendingComment.Clear() }
             $i++; continue
         }
 
-        # -- Preprocessor ---------------------------------------------------
         if ($trimmed -match '^#') {
             $pendingComment.Clear(); $pendingMacro = ""
             $i++; continue
         }
 
-        # ===================================================================
-        #  TOP LEVEL
-        # ===================================================================
-        if ($state -eq "top") {
-
-            # UCLASS / USTRUCT / UENUM / UINTERFACE (may span multiple lines)
+        if ($state -eq 'top') {
             if ($trimmed -match '^(UCLASS|USTRUCT|UENUM|UINTERFACE)\s*\(') {
-                $endIdx = $i
-                $macro = Read-MacroBlock $raw $i ([ref]$endIdx)
-                $i = $endIdx
+                $endIndex = $i
+                $macro = Read-MacroBlock $raw $i ([ref]$endIndex)
+                $i = $endIndex
                 if ($macro -match '^(UCLASS|USTRUCT|UENUM|UINTERFACE)') {
-                    $pendingTypeSpec     = $Matches[1]
+                    $pendingTypeSpec = $Matches[1]
                     $pendingTypeSpecArgs = Get-MacroArgs $macro
                 }
                 $i++; continue
             }
 
-            # Forward declaration  class Foo;  or  struct Bar;
             if ($trimmed -match '^(class|struct)\s+\w+\s*;') {
-                $pendingComment.Clear()
-                $i++; continue
+                $pendingComment.Clear(); $i++; continue
             }
 
-            # class declaration
-            if ($trimmed -match '^class\s+(\w+_API\s+)?(\w+)(?:\s*:\s*(?:public|protected|private)\s+([\w:<>, ]+?))?(?:\s*\{)?\s*$') {
-                $apiMacro = if ($Matches[1]) { $Matches[1].Trim() } else { "" }
+            if ($trimmed -match '^(class|struct)\s+(\w+_API\s+)?(\w+)(?:\s*:\s*(?:public|protected|private)\s+([^\{]+?))?\s*(\{)?\s*$') {
+                $kind = $Matches[1]
+                $apiMacro = if ($Matches[2]) { $Matches[2].Trim() } else { "" }
                 $currentType = [PSCustomObject]@{
-                    Kind        = "class"
-                    SpecType    = if ($pendingTypeSpec) { $pendingTypeSpec } else { "class" }
-                    SpecArgs    = $pendingTypeSpecArgs
-                    ClassName   = $Matches[2]
-                    ParentClass = if ($Matches[3]) { $Matches[3].Trim() } else { "" }
-                    Module      = if ($apiMacro) { $apiMacro -replace '_API$', '' } else { "" }
-                    Comment     = (Join-CommentLines $pendingComment)
-                    Members     = [System.Collections.Generic.List[PSCustomObject]]::new()
+                    Kind = $kind
+                    SpecType = if ($pendingTypeSpec) { $pendingTypeSpec } else { $kind }
+                    SpecArgs = $pendingTypeSpecArgs
+                    ClassName = $Matches[3]
+                    ParentClass = if ($Matches[4]) { $Matches[4].Trim() } else { "" }
+                    Module = if ($apiMacro) { $apiMacro -replace '_API$', '' } else { "" }
+                    Comment = Join-CommentLines $pendingComment
+                    Members = [System.Collections.Generic.List[PSCustomObject]]::new()
                 }
-                $pendingComment.Clear(); $pendingMacro = ""
-                $pendingTypeSpec = ""; $pendingTypeSpecArgs = ""
-                $currentAccess = "private"
-                $depth = 0
-                $state = if ($trimmed -match '\{') { "inType" } else { "awaitingBrace" }
-                $i++; continue
-            }
 
-            # struct declaration
-            if ($trimmed -match '^struct\s+(\w+_API\s+)?(\w+)(?:\s*:\s*(?:public|protected|private)\s+([\w:<>, ]+?))?(?:\s*\{)?\s*$') {
-                $apiMacro = if ($Matches[1]) { $Matches[1].Trim() } else { "" }
-                $currentType = [PSCustomObject]@{
-                    Kind        = "struct"
-                    SpecType    = if ($pendingTypeSpec) { $pendingTypeSpec } else { "struct" }
-                    SpecArgs    = $pendingTypeSpecArgs
-                    ClassName   = $Matches[2]
-                    ParentClass = if ($Matches[3]) { $Matches[3].Trim() } else { "" }
-                    Module      = if ($apiMacro) { $apiMacro -replace '_API$', '' } else { "" }
-                    Comment     = (Join-CommentLines $pendingComment)
-                    Members     = [System.Collections.Generic.List[PSCustomObject]]::new()
-                }
+                $currentAccess = if ($kind -eq 'struct') { 'public' } else { 'private' }
+                $state = if ($Matches[5]) { 'inType' } else { 'awaitingBrace' }
+                $depth = 0
                 $pendingComment.Clear(); $pendingMacro = ""
                 $pendingTypeSpec = ""; $pendingTypeSpecArgs = ""
-                $currentAccess = "public"
-                $depth = 0
-                $state = if ($trimmed -match '\{') { "inType" } else { "awaitingBrace" }
                 $i++; continue
             }
 
             $pendingComment.Clear(); $pendingMacro = ""
         }
-
-        # ===================================================================
-        #  AWAITING OPENING BRACE
-        # ===================================================================
-        elseif ($state -eq "awaitingBrace") {
-            if ($trimmed -eq '{') { $state = "inType" }
+        elseif ($state -eq 'awaitingBrace') {
+            if ($trimmed -match '^\{') { $state = 'inType' }
         }
-
-        # ===================================================================
-        #  INSIDE TYPE
-        # ===================================================================
-        elseif ($state -eq "inType") {
-
-            # Closing brace
+        elseif ($state -eq 'inType') {
             if ($trimmed -match '^}\s*;?\s*$') {
                 if ($depth -eq 0) {
-                    $types.Add($currentType) | Out-Null
+                    $types.Add($currentType)
                     $currentType = $null
-                    $state = "top"
-                } else {
-                    $depth--
+                    $state = 'top'
                 }
+                else { $depth-- }
                 $pendingComment.Clear(); $pendingMacro = ""
                 $i++; continue
             }
 
-            # Pure opening brace on its own line (nested scope)
             if ($trimmed -eq '{') {
                 $depth++
                 $pendingComment.Clear()
                 $i++; continue
             }
 
-            # Inside nested scope — track depth but skip parsing
             if ($depth -gt 0) {
-                $opens  = Count-Char $trimmed '{'
-                $closes = Count-Char $trimmed '}'
-                $depth += $opens - $closes
+                $depth += (Count-Char $trimmed '{') - (Count-Char $trimmed '}')
                 if ($depth -lt 0) { $depth = 0 }
                 $pendingComment.Clear(); $pendingMacro = ""
                 $i++; continue
             }
 
-            # At depth 0 inside the type body:
-
             if ($trimmed -match '^GENERATED') {
-                $pendingComment.Clear()
-                $i++; continue
+                $pendingComment.Clear(); $i++; continue
             }
 
             if ($trimmed -match '^(public|protected|private)\s*:') {
                 $currentAccess = $Matches[1]
-                $pendingComment.Clear()
-                $i++; continue
+                $pendingComment.Clear(); $i++; continue
             }
 
-            # UE member macros (always on the line immediately before the decl)
             if ($trimmed -match '^(UPROPERTY|UFUNCTION|UMETA|UDELEGATE)\s*\(') {
-                $endIdx = $i
-                $pendingMacro = Read-MacroBlock $raw $i ([ref]$endIdx)
-                $i = $endIdx
-                $i++; continue
+                $endIndex = $i
+                $pendingMacro = Read-MacroBlock $raw $i ([ref]$endIndex)
+                $i = $endIndex + 1
+                continue
             }
 
             if ($trimmed -match '^(friend\b|using\b|typedef\b|DECLARE_|DEFINE_|static_assert)') {
@@ -451,573 +459,635 @@ function Parse-Header([string]$Path) {
                 $i++; continue
             }
 
-            # Collect a full declaration (may span multiple lines)
-            $decl = $trimmed
-            $j = $i
+            $declaration = $trimmed
+            $cursor = $i
+            $hasInlineBody = $declaration -match '\{[^{}]*\}'
 
-            $hasInlineBody = $decl -match '\{[^}]*\}'
-
-            if (-not $hasInlineBody -and $decl -notmatch '[;{]') {
-                while (($j + 1) -lt $n -and $decl -notmatch '[;{]') {
-                    $j++
-                    $decl += " " + $raw[$j].Trim()
+            if (-not $hasInlineBody -and $declaration -notmatch '[;{]') {
+                while (($cursor + 1) -lt $raw.Count -and $declaration -notmatch '[;{]') {
+                    $cursor++
+                    $declaration += ' ' + $raw[$cursor].Trim()
                 }
-                if ($j -gt $i) { $i = $j }
+                $i = $cursor
             }
 
-            # Bare opening brace at end = nested scope, not a member decl
-            if ($decl -match '\{\s*$' -and $decl -notmatch '\{[^}]*\}') {
-                $opens  = Count-Char $decl '{'
-                $closes = Count-Char $decl '}'
-                $depth += $opens - $closes
+            if ($declaration -match '\{\s*$' -and $declaration -notmatch '\{[^{}]*\}') {
+                $depth += (Count-Char $declaration '{') - (Count-Char $declaration '}')
                 $pendingComment.Clear(); $pendingMacro = ""
                 $i++; continue
             }
 
             $comment = Join-CommentLines $pendingComment
+            $member = $null
 
-            if ($decl -match '\(') {
-                $m = Parse-MethodDecl $decl $currentAccess $comment $pendingMacro
-                if ($m) { $currentType.Members.Add($m) | Out-Null }
-            } elseif ($decl -match ';') {
-                $m = Parse-PropertyDecl $decl $currentAccess $comment $pendingMacro
-                if ($m) { $currentType.Members.Add($m) | Out-Null }
+            if ($declaration -match '\(') {
+                $member = Parse-MethodDecl $declaration $currentAccess $comment $pendingMacro
+            }
+            elseif ($declaration -match ';') {
+                $member = Parse-PropertyDecl $declaration $currentAccess $comment $pendingMacro
             }
 
+            if ($member) { $currentType.Members.Add($member) }
             $pendingComment.Clear(); $pendingMacro = ""
         }
 
         $i++
     }
 
-    return $types
+    return @($types)
 }
 
-# ---------------------------------------------------------------------------
-# Markdown generator
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# Markdown generation
+# -----------------------------------------------------------------------------
+
+function Escape-MarkdownCell([string]$Text) {
+    if ($null -eq $Text) { return "" }
+    return $Text.Replace('|', '\|').Replace("`r", ' ').Replace("`n", ' ')
+}
 
 function Generate-Markdown(
     [PSCustomObject[]]$Types,
     [string]$HeaderPath,
     [string[]]$CppLines,
-    [string]$SourceRelPath = ""
+    [string]$SourceRelativePath = ""
 ) {
-    $sb              = [System.Text.StringBuilder]::new()
-    $fileName        = Split-Path -Leaf $HeaderPath
-    $fileNameNoExt   = [System.IO.Path]::GetFileNameWithoutExtension($HeaderPath)
+    $builder = [System.Text.StringBuilder]::new()
+    $fileName = Split-Path -Leaf $HeaderPath
+    $title = [System.IO.Path]::GetFileNameWithoutExtension($HeaderPath)
+    $implemented = New-CaseInsensitiveSet
 
-    # Index of implemented methods from .cpp
-    $implemented = @{}
-    if ($CppLines) {
-        foreach ($cl in $CppLines) {
-            if ($cl -match '::\s*(\w+)\s*\(') { $implemented[$Matches[1]] = $true }
-        }
+    foreach ($line in @($CppLines)) {
+        if ($line -match '::\s*(\w+)\s*\(') { [void]$implemented.Add($Matches[1]) }
     }
 
-    [void]$sb.AppendLine("# $fileNameNoExt")
-    [void]$sb.AppendLine()
-    [void]$sb.AppendLine("**File:** $BT$fileName$BT")
-    if ($SourceRelPath) {
-        [void]$sb.AppendLine("**Path:** $BT$SourceRelPath$BT")
-    }
-    [void]$sb.AppendLine()
+    [void]$builder.AppendLine("# $title")
+    [void]$builder.AppendLine()
+    [void]$builder.AppendLine("**File:** $BT$fileName$BT")
+    if ($SourceRelativePath) { [void]$builder.AppendLine("**Path:** $BT$SourceRelativePath$BT") }
+    [void]$builder.AppendLine()
 
-    $typeCount = $Types.Count
-
-    for ($ti = 0; $ti -lt $typeCount; $ti++) {
-        $type = $Types[$ti]
-
+    foreach ($type in $Types) {
         $typeLabel = switch ($type.SpecType) {
-            'UCLASS'     { 'UObject Class' }
-            'USTRUCT'    { 'UStruct' }
-            'UENUM'      { 'UEnum' }
+            'UCLASS' { 'UObject Class' }
+            'USTRUCT' { 'UStruct' }
+            'UENUM' { 'UEnum' }
             'UINTERFACE' { 'UInterface' }
-            'struct'     { 'Struct' }
-            default      { 'Class' }
+            'struct' { 'Struct' }
+            default { 'Class' }
         }
 
-        [void]$sb.AppendLine("---")
-        [void]$sb.AppendLine()
-        [void]$sb.AppendLine("## $($type.ClassName)")
-        [void]$sb.AppendLine()
+        [void]$builder.AppendLine('---')
+        [void]$builder.AppendLine()
+        [void]$builder.AppendLine("## $($type.ClassName)")
+        [void]$builder.AppendLine()
 
-        $metaParts = [System.Collections.Generic.List[string]]::new()
-        $metaParts.Add("**Type:** $typeLabel") | Out-Null
-        if ($type.ParentClass) { $metaParts.Add("**Inherits:** $BT$($type.ParentClass)$BT") | Out-Null }
-        if ($type.Module)      { $metaParts.Add("**Module:** $($type.Module)") | Out-Null }
-        [void]$sb.AppendLine(($metaParts -join " | "))
-        [void]$sb.AppendLine()
+        $metadata = [System.Collections.Generic.List[string]]::new()
+        $metadata.Add("**Type:** $typeLabel")
+        if ($type.ParentClass) { $metadata.Add("**Inherits:** $BT$($type.ParentClass)$BT") }
+        if ($type.Module) { $metadata.Add("**Module:** $($type.Module)") }
+        [void]$builder.AppendLine($metadata -join ' | ')
+        [void]$builder.AppendLine()
 
         if ($type.SpecArgs) {
-            $specTokens = ($type.SpecArgs -split ',') |
-                          ForEach-Object { $_.Trim() } |
-                          Where-Object { $_ }
-            if ($specTokens) {
-                $specMd = ($specTokens | ForEach-Object { "$BT$_$BT" }) -join " "
-                [void]$sb.AppendLine("**Specifiers:** $specMd")
-                [void]$sb.AppendLine()
+            $tokens = @($type.SpecArgs -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+            if ($tokens.Count -gt 0) {
+                [void]$builder.AppendLine('**Specifiers:** ' + (($tokens | ForEach-Object { "$BT$_$BT" }) -join ' '))
+                [void]$builder.AppendLine()
             }
         }
 
         if ($type.Comment) {
-            [void]$sb.AppendLine("> $($type.Comment)")
-            [void]$sb.AppendLine()
+            [void]$builder.AppendLine("> $($type.Comment)")
+            [void]$builder.AppendLine()
         }
 
-        # Properties
-        $props = @($type.Members | Where-Object { $_.Kind -eq 'property' })
-        if ($props.Count -gt 0) {
-            [void]$sb.AppendLine("### Properties")
-            [void]$sb.AppendLine()
+        $properties = @($type.Members | Where-Object { $_.Kind -eq 'property' })
+        if ($properties.Count -gt 0) {
+            [void]$builder.AppendLine('### Properties')
+            [void]$builder.AppendLine()
 
-            foreach ($acc in @('public', 'protected', 'private')) {
-                $grp = @($props | Where-Object { $_.Access -eq $acc })
-                if ($grp.Count -eq 0) { continue }
+            foreach ($access in @('public', 'protected', 'private')) {
+                $group = @($properties | Where-Object { $_.Access -eq $access })
+                if ($group.Count -eq 0) { continue }
 
-                $accLabel = $acc.Substring(0,1).ToUpper() + $acc.Substring(1)
-                [void]$sb.AppendLine("#### $accLabel")
-                [void]$sb.AppendLine()
-                [void]$sb.AppendLine("| Name | Type | Specifiers | Description |")
-                [void]$sb.AppendLine("|------|------|------------|-------------|")
+                [void]$builder.AppendLine('#### ' + ($access.Substring(0, 1).ToUpper() + $access.Substring(1)))
+                [void]$builder.AppendLine()
+                [void]$builder.AppendLine('| Name | Type | Specifiers | Description |')
+                [void]$builder.AppendLine('|---|---|---|---|')
 
-                foreach ($p in $grp) {
-                    $spec = if ($p.UESpecifiers) { "$BT$($p.UESpecifiers)$BT" } else { "" }
-                    $desc = $p.Comment -replace '\|', '\|'
-                    [void]$sb.AppendLine("| $BT$($p.Name)$BT | $BT$($p.Type)$BT | $spec | $desc |")
+                foreach ($property in $group) {
+                    $specifiers = if ($property.UESpecifiers) { "$BT$($property.UESpecifiers)$BT" } else { "" }
+                    $description = Escape-MarkdownCell $property.Comment
+                    [void]$builder.AppendLine("| $BT$($property.Name)$BT | $BT$($property.Type)$BT | $specifiers | $description |")
                 }
-                [void]$sb.AppendLine()
+                [void]$builder.AppendLine()
             }
         }
 
-        # Methods
         $methods = @($type.Members | Where-Object { $_.Kind -eq 'method' })
         if ($methods.Count -gt 0) {
-            [void]$sb.AppendLine("### Methods")
-            [void]$sb.AppendLine()
+            [void]$builder.AppendLine('### Methods')
+            [void]$builder.AppendLine()
 
-            foreach ($acc in @('public', 'protected', 'private')) {
-                $grp = @($methods | Where-Object { $_.Access -eq $acc })
-                if ($grp.Count -eq 0) { continue }
+            foreach ($access in @('public', 'protected', 'private')) {
+                $group = @($methods | Where-Object { $_.Access -eq $access })
+                if ($group.Count -eq 0) { continue }
 
-                $accLabel = $acc.Substring(0,1).ToUpper() + $acc.Substring(1)
-                [void]$sb.AppendLine("#### $accLabel")
-                [void]$sb.AppendLine()
+                [void]$builder.AppendLine('#### ' + ($access.Substring(0, 1).ToUpper() + $access.Substring(1)))
+                [void]$builder.AppendLine()
 
-                foreach ($m in $grp) {
-                    [void]$sb.AppendLine("##### $BT$($m.Signature)$BT")
-                    [void]$sb.AppendLine()
-
+                foreach ($method in $group) {
+                    [void]$builder.AppendLine("##### $BT$($method.Signature)$BT")
+                    [void]$builder.AppendLine()
                     $badges = [System.Collections.Generic.List[string]]::new()
-                    if ($m.Modifiers) { $badges.Add("_$($m.Modifiers)_") | Out-Null }
-                    if ($m.UESpecifiers) {
-                        $badges.Add("${BT}UFUNCTION($($m.UESpecifiers))${BT}") | Out-Null
-                    }
-                    if ($CppLines -and $implemented.ContainsKey($m.Name)) {
-                        $badges.Add("_implemented in .cpp_") | Out-Null
-                    }
+                    if ($method.Modifiers) { $badges.Add("_$($method.Modifiers)_") }
+                    if ($method.UESpecifiers) { $badges.Add("${BT}UFUNCTION($($method.UESpecifiers))${BT}") }
+                    if ($implemented.Contains($method.Name)) { $badges.Add('_implemented in .cpp_') }
+
                     if ($badges.Count -gt 0) {
-                        [void]$sb.AppendLine(($badges -join " | "))
-                        [void]$sb.AppendLine()
+                        [void]$builder.AppendLine($badges -join ' | ')
+                        [void]$builder.AppendLine()
                     }
 
-                    if ($m.Comment) {
-                        [void]$sb.AppendLine($m.Comment)
-                        [void]$sb.AppendLine()
+                    if ($method.Comment) {
+                        [void]$builder.AppendLine($method.Comment)
+                        [void]$builder.AppendLine()
                     }
                 }
             }
         }
     }
 
-    return $sb.ToString()
+    return $builder.ToString()
 }
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-function Convert-SingleHeader([string]$HPath, [string]$OutPath, [string]$RelPath = "") {
-    $cppFile  = [System.IO.Path]::ChangeExtension($HPath, ".cpp")
-    $cppLines = $null
-    if (Test-Path $cppFile) {
-        Write-Host "  Found .cpp : $(Split-Path -Leaf $cppFile)" -ForegroundColor DarkGray
-        $cppLines = Get-Content $cppFile -Encoding UTF8
-    }
-
-    Write-Host "Parsing    : $HPath" -ForegroundColor Cyan
-    $types = @(Parse-Header $HPath)
+function Convert-SingleHeader(
+    [string]$HeaderPath,
+    [string]$OutputPath,
+    [string]$RelativePath = "",
+    [switch]$WhatIfOnly
+) {
+    Write-Host "Parsing : $HeaderPath" -ForegroundColor Cyan
+    $types = @(Parse-Header $HeaderPath)
 
     if ($types.Count -eq 0) {
-        Write-Host "  [SKIP] No types found." -ForegroundColor DarkGray
-        return
+        Write-Host '  [SKIP] No supported class or struct declarations found.' -ForegroundColor DarkGray
+        return $false
     }
 
-    $names = ($types | ForEach-Object { $_.ClassName }) -join ", "
-    Write-Host "  Found      : $($types.Count) type(s) -- $names" -ForegroundColor Green
+    $names = ($types | ForEach-Object { $_.ClassName }) -join ', '
+    Write-Host "  Types  : $names" -ForegroundColor Green
 
-    $dir = Split-Path -Parent $OutPath
-    if ($dir -and -not (Test-Path $dir)) {
-        New-Item -ItemType Directory -Force -Path $dir | Out-Null
+    if ($WhatIfOnly) {
+        Write-Host "  [DRY RUN] Output: $OutputPath" -ForegroundColor Yellow
+        return $true
     }
 
-    $markdown = Generate-Markdown $types $HPath $cppLines $RelPath
-    [System.IO.File]::WriteAllText($OutPath, $markdown, [System.Text.Encoding]::UTF8)
-    Write-Host "  Written    : $OutPath" -ForegroundColor Green
-}
-
-function Find-ProjectRoot([string]$StartDir) {
-    $dir = $StartDir
-    while ($dir) {
-        $uprojects = Get-ChildItem -Path $dir -Filter "*.uproject" -ErrorAction SilentlyContinue
-        if ($uprojects) { return $dir }
-        $parent = Split-Path -Parent $dir
-        if ($parent -eq $dir) { break }
-        $dir = $parent
+    $cppPath = [System.IO.Path]::ChangeExtension($HeaderPath, '.cpp')
+    $cppLines = if (Test-Path -LiteralPath $cppPath) {
+        @(Get-Content -LiteralPath $cppPath -Encoding UTF8)
     }
-    return ""
+    else { @() }
+
+    $parent = Split-Path -Parent $OutputPath
+    if ($parent -and -not (Test-Path -LiteralPath $parent)) {
+        New-Item -ItemType Directory -Path $parent -Force | Out-Null
+    }
+
+    $markdown = Generate-Markdown $types $HeaderPath $cppLines $RelativePath
+    [System.IO.File]::WriteAllText($OutputPath, $markdown, [System.Text.UTF8Encoding]::new($false))
+    Write-Host "  Written: $OutputPath" -ForegroundColor Green
+    return $true
 }
 
-function Find-ProjectPluginSourceRoots([string]$ResolvedProjectRoot, [string[]]$ExcludedPluginNames) {
-    $pluginsRoot = Join-Path $ResolvedProjectRoot "Plugins"
-    if (-not (Test-Path $pluginsRoot)) { return @() }
+# -----------------------------------------------------------------------------
+# Plugin discovery
+# -----------------------------------------------------------------------------
 
-    $excludeSet  = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
-    foreach ($name in @($ExcludedPluginNames)) { if ($name) { [void]$excludeSet.Add($name) } }
-
-    $roots = [System.Collections.Generic.List[PSCustomObject]]::new()
-    Get-ChildItem -Path $pluginsRoot -Filter "*.uplugin" -Recurse -File -ErrorAction SilentlyContinue |
-        ForEach-Object {
-            $pluginName = [System.IO.Path]::GetFileNameWithoutExtension($_.Name)
-            if ($excludeSet.Contains($pluginName)) { return }
-
-            $sourceRoot = Join-Path $_.Directory.FullName "Source"
-            if (-not (Test-Path $sourceRoot)) { return }
-
-            $roots.Add([PSCustomObject]@{
-                PluginName = $pluginName
-                SourceRoot = $sourceRoot
-            }) | Out-Null
-        }
-
-    return @($roots)
-}
-
-# Enabled-plugin entries from the .uproject's "Plugins" array (name only; a plugin listed there
-# with no matching project Plugins/ subfolder is installed at the engine level instead, e.g. a
-# Marketplace plugin like Voxel that ships its .uplugin/Source under <Engine>\Engine\Plugins\...
-# and only leaves a per-project Content-only stub behind).
 function Find-EnabledUProjectPlugins([string]$UProjectPath) {
-    if (-not (Test-Path $UProjectPath)) { return @() }
-    $json = Get-Content -LiteralPath $UProjectPath -Raw | ConvertFrom-Json
-    if (-not $json.Plugins) { return @() }
-    return @($json.Plugins | Where-Object { $_.Enabled -eq $true } | ForEach-Object { $_.Name })
+    try {
+        $json = Get-Content `
+            -LiteralPath $UProjectPath `
+            -Raw `
+            -Encoding UTF8 |
+            ConvertFrom-Json
+    }
+    catch {
+        throw "Could not parse project descriptor '$UProjectPath': $($_.Exception.Message)"
+    }
+
+    $pluginsProperty = $json.PSObject.Properties['Plugins']
+    if ($null -eq $pluginsProperty) {
+        Write-Host '[WARN] The .uproject descriptor has no Plugins array.' -ForegroundColor Yellow
+        return @()
+    }
+
+    return @(
+        @($pluginsProperty.Value) |
+        Where-Object {
+            if ($null -eq $_) { return $false }
+
+            $nameProperty = $_.PSObject.Properties['Name']
+            $enabledProperty = $_.PSObject.Properties['Enabled']
+
+            return (
+                $null -ne $nameProperty -and
+                -not [string]::IsNullOrWhiteSpace([string]$nameProperty.Value) -and
+                $null -ne $enabledProperty -and
+                $enabledProperty.Value -eq $true
+            )
+        } |
+        ForEach-Object {
+            [string]$_.PSObject.Properties['Name'].Value
+        } |
+        Sort-Object -Unique
+    )
 }
 
-function Find-EnginePluginSourceRoots([string]$ResolvedEnginePath, [string[]]$EnabledPluginNames, [string[]]$AlreadyFoundNames, [string[]]$ExcludedPluginNames) {
-    $enginePluginsRoot = Join-Path $ResolvedEnginePath "Engine\Plugins"
-    if (-not (Test-Path $enginePluginsRoot)) { return @() }
+function Get-UPluginDependencies([string]$UPluginPath) {
+    try {
+        $json = Get-Content `
+            -LiteralPath $UPluginPath `
+            -Raw `
+            -Encoding UTF8 |
+            ConvertFrom-Json
+    }
+    catch {
+        Write-Host "[WARN] Cannot parse plugin descriptor: $UPluginPath" -ForegroundColor Yellow
+        return @()
+    }
 
-    $alreadyFound = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
-    foreach ($name in @($AlreadyFoundNames)) { if ($name) { [void]$alreadyFound.Add($name) } }
+    # The Plugins dependency array is optional in valid .uplugin descriptors.
+    # Inspect PSObject.Properties so Set-StrictMode does not throw when absent.
+    $pluginsProperty = $json.PSObject.Properties['Plugins']
+    if ($null -eq $pluginsProperty) {
+        return @()
+    }
 
-    $excludeSet = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
-    foreach ($name in @($ExcludedPluginNames)) { if ($name) { [void]$excludeSet.Add($name) } }
+    return @(
+        @($pluginsProperty.Value) |
+        Where-Object {
+            if ($null -eq $_) { return $false }
 
-    # One recursive walk of the whole engine Plugins/ tree (900+ .uplugin files across thousands
-    # of folders on a full UE5 install), indexed by base name, instead of re-walking that same
-    # tree once per enabled plugin - the latter turned a dozen-plugin project into a dozen full
-    # tree scans (~5s each) for a ~1s total win of nothing.
-    $upluginIndex = New-Object 'System.Collections.Generic.Dictionary[string,object]' ([System.StringComparer]::OrdinalIgnoreCase)
-    Get-ChildItem -Path $enginePluginsRoot -Filter '*.uplugin' -Recurse -File -ErrorAction SilentlyContinue |
+            $nameProperty = $_.PSObject.Properties['Name']
+            if (
+                $null -eq $nameProperty -or
+                [string]::IsNullOrWhiteSpace([string]$nameProperty.Value)
+            ) {
+                return $false
+            }
+
+            $enabledProperty = $_.PSObject.Properties['Enabled']
+
+            # Missing Enabled means the dependency declaration is active.
+            return (
+                $null -eq $enabledProperty -or
+                $enabledProperty.Value -eq $true
+            )
+        } |
         ForEach-Object {
-            # First match wins if the same plugin name somehow appears twice under Engine\Plugins.
-            if (-not $upluginIndex.ContainsKey($_.BaseName)) { $upluginIndex[$_.BaseName] = $_ }
+            [string]$_.PSObject.Properties['Name'].Value
+        } |
+        Sort-Object -Unique
+    )
+}
+
+function New-PluginDescriptorIndex([string]$ResolvedProjectRoot, [string]$ResolvedEnginePath) {
+    $index = New-Object 'System.Collections.Generic.Dictionary[string,object]' ([System.StringComparer]::OrdinalIgnoreCase)
+    $excludedSegments = @('Binaries', 'Intermediate', 'Saved', 'DerivedDataCache', 'Documentation', '.git', '.vs')
+    $searchRoots = [System.Collections.Generic.List[PSCustomObject]]::new()
+    $searchRoots.Add([PSCustomObject]@{ Path = $ResolvedProjectRoot; Priority = 0; Origin = 'Project' })
+
+    $enginePluginsRoot = Join-Path $ResolvedEnginePath 'Engine\Plugins'
+    if (Test-Path -LiteralPath $enginePluginsRoot -PathType Container) {
+        $searchRoots.Add([PSCustomObject]@{ Path = $enginePluginsRoot; Priority = 1; Origin = 'Engine' })
+    }
+
+    foreach ($searchRoot in $searchRoots) {
+        Get-ChildItem -LiteralPath $searchRoot.Path -Filter '*.uplugin' -Recurse -File -ErrorAction SilentlyContinue |
+        Where-Object { -not (Test-PathHasExcludedSegment $_.FullName $excludedSegments) } |
+        ForEach-Object {
+            $record = [PSCustomObject]@{
+                PluginName = $_.BaseName
+                DescriptorPath = $_.FullName
+                PluginRoot = $_.Directory.FullName
+                SourceRoot = Join-Path $_.Directory.FullName 'Source'
+                Origin = $searchRoot.Origin
+                Priority = $searchRoot.Priority
+            }
+
+            if (-not $index.ContainsKey($_.BaseName) -or $record.Priority -lt $index[$_.BaseName].Priority) {
+                $index[$_.BaseName] = $record
+            }
+        }
+    }
+
+    return $index
+}
+
+function Resolve-EnabledPluginNames([string[]]$InitialNames, $DescriptorIndex, [string[]]$ExcludedNames) {
+    $resolved = New-CaseInsensitiveSet
+    $excluded = New-CaseInsensitiveSet
+    $pending = [System.Collections.Generic.Queue[string]]::new()
+
+    foreach ($name in @($ExcludedNames)) { if ($name) { [void]$excluded.Add($name) } }
+    foreach ($name in @($InitialNames)) {
+        if ($name -and -not $excluded.Contains($name)) { $pending.Enqueue($name) }
+    }
+
+    while ($pending.Count -gt 0) {
+        $pluginName = $pending.Dequeue()
+        if ($resolved.Contains($pluginName) -or $excluded.Contains($pluginName)) { continue }
+        [void]$resolved.Add($pluginName)
+
+        if (-not $DescriptorIndex.ContainsKey($pluginName)) { continue }
+        foreach ($dependency in @(Get-UPluginDependencies $DescriptorIndex[$pluginName].DescriptorPath)) {
+            if ($dependency -and -not $resolved.Contains($dependency) -and -not $excluded.Contains($dependency)) {
+                $pending.Enqueue($dependency)
+            }
+        }
+    }
+
+    return @($resolved | Sort-Object)
+}
+
+function Find-EnabledPluginSourceRoots([string[]]$EnabledNames, $DescriptorIndex, [string[]]$ExcludedNames) {
+    $excluded = New-CaseInsensitiveSet
+    foreach ($name in @($ExcludedNames)) { if ($name) { [void]$excluded.Add($name) } }
+    $roots = [System.Collections.Generic.List[PSCustomObject]]::new()
+
+    foreach ($pluginName in @($EnabledNames | Sort-Object -Unique)) {
+        if (-not $pluginName -or $excluded.Contains($pluginName)) { continue }
+
+        if (-not $DescriptorIndex.ContainsKey($pluginName)) {
+            Write-Host "  [NOT FOUND] $pluginName" -ForegroundColor Red
+            continue
         }
 
-    $roots = [System.Collections.Generic.List[PSCustomObject]]::new()
-    foreach ($pluginName in @($EnabledPluginNames)) {
-        if (-not $pluginName) { continue }
-        if ($alreadyFound.Contains($pluginName)) { continue }
-        if ($excludeSet.Contains($pluginName)) { continue }
-
-        $upluginFile = $upluginIndex[$pluginName]
-        if (-not $upluginFile) { continue }
-
-        $sourceRoot = Join-Path $upluginFile.Directory.FullName "Source"
-        if (-not (Test-Path $sourceRoot)) { continue }
+        $record = $DescriptorIndex[$pluginName]
+        if (-not (Test-Path -LiteralPath $record.SourceRoot -PathType Container)) {
+            Write-Host "  [NO SOURCE] $pluginName -> $($record.DescriptorPath)" -ForegroundColor Yellow
+            continue
+        }
 
         $roots.Add([PSCustomObject]@{
             PluginName = $pluginName
-            SourceRoot = $sourceRoot
-        }) | Out-Null
+            SourceRoot = $record.SourceRoot
+            DescriptorPath = $record.DescriptorPath
+            Origin = $record.Origin
+        })
+        Write-Host "  [FOUND][$($record.Origin)] $pluginName -> $($record.SourceRoot)" -ForegroundColor Green
     }
 
     return @($roots)
 }
 
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# Source scan
+# -----------------------------------------------------------------------------
 
-if ($ScanAll) {
+function Invoke-SourceScan {
+    $resolvedRoot = Resolve-ProjectRoot
+    $uprojectPath = Get-UProjectPath $resolvedRoot
 
-    # Resolve project root
-    if (-not $ProjectRoot) {
-        $ProjectRoot = Find-ProjectRoot (Get-Location).Path
-    }
-    if (-not $ProjectRoot -or -not (Test-Path $ProjectRoot)) {
-        Write-Host "[ERROR] Could not locate .uproject. Pass -ProjectRoot explicitly." -ForegroundColor Red
-        exit 1
-    }
-    $ProjectRoot = (Resolve-Path $ProjectRoot).Path
-    Write-Host "Project root : $ProjectRoot" -ForegroundColor Cyan
+    Write-Section 'Source scan configuration'
+    Write-Host "Project root : $resolvedRoot" -ForegroundColor Cyan
+    Write-Host "Project file : $uprojectPath" -ForegroundColor Cyan
+    Write-Host "Engine root  : $EnginePath" -ForegroundColor Cyan
 
-    # Segments that always disqualify a file path
-    $alwaysExclude = @('Intermediate', 'Binaries', 'ThirdParty')
+    $explicitNames = @(Find-EnabledUProjectPlugins $uprojectPath)
+    $descriptorIndex = New-PluginDescriptorIndex $resolvedRoot $EnginePath
+    $enabledNames = @(Resolve-EnabledPluginNames $explicitNames $descriptorIndex $ExcludePlugins)
 
-    $pluginRoots    = @(Find-ProjectPluginSourceRoots $ProjectRoot $ExcludePlugins)
+    Write-Host "Explicit plugins : $($explicitNames.Count)" -ForegroundColor Cyan
+    Write-Host "Resolved plugins : $($enabledNames.Count)" -ForegroundColor Cyan
+    if ($enabledNames.Count -gt 0) { Write-Host ('  ' + ($enabledNames -join ', ')) -ForegroundColor DarkGray }
 
-    if ($pluginRoots.Count -gt 0) {
-        $resolved = ($pluginRoots | ForEach-Object { $_.PluginName } | Sort-Object -Unique) -join ", "
-        Write-Host "Project plugin source roots scanned : $resolved" -ForegroundColor Cyan
-    } else {
-        Write-Host "[WARN] No project plugin source roots found under <ProjectRoot>\\Plugins." -ForegroundColor Yellow
-    }
+    Write-Section 'Enabled plugin source roots'
+    $pluginRoots = @(Find-EnabledPluginSourceRoots $enabledNames $descriptorIndex $ExcludePlugins)
 
-    # Plugins the .uproject enables but that have no project-level Plugins/<Name>/Source (e.g. a
-    # Marketplace plugin like Voxel, installed engine-wide with only a Content-only stub left in
-    # the project). Pull their real source from the engine install instead.
-    $uprojectFilesForEngine = Get-ChildItem -LiteralPath $ProjectRoot -Filter '*.uproject' -File -ErrorAction SilentlyContinue
-    $enabledEnginePlugins = if ($uprojectFilesForEngine) { Find-EnabledUProjectPlugins $uprojectFilesForEngine[0].FullName } else { @() }
-    $alreadyFoundPluginNames = @($pluginRoots | ForEach-Object { $_.PluginName })
+    $headers = [System.Collections.Generic.List[PSCustomObject]]::new()
+    $excludedSegments = @('Intermediate', 'Binaries', 'ThirdParty')
+    $projectSourceRoot = Join-Path $resolvedRoot 'Source'
 
-    if (-not (Test-Path $EnginePath)) {
-        Write-Host "[WARN] EnginePath '$EnginePath' not found; skipping engine-installed plugin scan. Pass -EnginePath explicitly." -ForegroundColor Yellow
-    } else {
-        $enginePluginRoots = @(Find-EnginePluginSourceRoots $EnginePath $enabledEnginePlugins $alreadyFoundPluginNames $ExcludePlugins)
-        if ($enginePluginRoots.Count -gt 0) {
-            $resolvedEngine = ($enginePluginRoots | ForEach-Object { $_.PluginName } | Sort-Object -Unique) -join ", "
-            Write-Host "Engine-installed plugin source roots scanned : $resolvedEngine" -ForegroundColor Cyan
-            $pluginRoots += $enginePluginRoots
-        }
-
-        # Anything the .uproject enables that still has no source root (neither project-vendored
-        # nor found under Engine\Plugins) is either Content-only (no Source\ folder - nothing to
-        # document) or genuinely missing. Either way, surface it instead of silently dropping it.
-        $excludeSetForReport = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
-        foreach ($n in @($ExcludePlugins)) { if ($n) { [void]$excludeSetForReport.Add($n) } }
-        $coveredNames = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
-        foreach ($n in @($pluginRoots | ForEach-Object { $_.PluginName })) { [void]$coveredNames.Add($n) }
-        $unresolved = @($enabledEnginePlugins | Where-Object {
-            $_ -and -not $coveredNames.Contains($_) -and -not $excludeSetForReport.Contains($_)
-        } | Sort-Object -Unique)
-        if ($unresolved.Count -gt 0) {
-            Write-Host "[WARN] Enabled but no Source\ found (project or engine) - likely Content-only: $($unresolved -join ', ')" -ForegroundColor Yellow
+    if (Test-Path -LiteralPath $projectSourceRoot -PathType Container) {
+        Get-ChildItem -LiteralPath $projectSourceRoot -Filter '*.h' -Recurse -File -ErrorAction SilentlyContinue |
+        Where-Object {
+            $_.Name -notmatch '\.generated\.h$' -and
+            -not (Test-PathHasExcludedSegment $_.FullName $excludedSegments)
+        } |
+        ForEach-Object {
+            $headers.Add([PSCustomObject]@{
+                HeaderPath = $_.FullName
+                BucketDir = 'Project'
+                SourceRoot = $projectSourceRoot
+            })
         }
     }
 
-    $headerRecords = [System.Collections.Generic.List[PSCustomObject]]::new()
+    foreach ($plugin in $pluginRoots) {
+        Get-ChildItem -LiteralPath $plugin.SourceRoot -Filter '*.h' -Recurse -File -ErrorAction SilentlyContinue |
+        Where-Object {
+            $_.Name -notmatch '\.generated\.h$' -and
+            -not (Test-PathHasExcludedSegment $_.FullName $excludedSegments)
+        } |
+        ForEach-Object {
+            $relative = Get-RelativePathCompat $plugin.SourceRoot $_.FullName
+            $parts = $relative -split '[\\/]'
+            $moduleName = if ($parts.Count -gt 1) { $parts[0] } else { 'Root' }
 
-    # Project bucket: Source/** -> Project/
-    $projectSourceRoot = Join-Path $ProjectRoot "Source"
-    if (Test-Path $projectSourceRoot) {
-        Get-ChildItem -Path $projectSourceRoot -Filter "*.h" -Recurse -ErrorAction SilentlyContinue |
-            Where-Object {
-                $path = $_.FullName
-                if ($_.Name -match '\.generated\.h$') { return $false }
-                foreach ($seg in $alwaysExclude) {
-                    if ($path -match "\\$seg\\") { return $false }
-                }
-                return $true
-            } |
-            ForEach-Object {
-                $headerRecords.Add([PSCustomObject]@{
-                    HeaderPath = $_.FullName
-                    BucketDir  = "Project"
-                    SourceRoot = $projectSourceRoot
-                }) | Out-Null
-            }
+            $headers.Add([PSCustomObject]@{
+                HeaderPath = $_.FullName
+                BucketDir = Join-Path 'Plugins' (Join-Path $plugin.PluginName $moduleName)
+                SourceRoot = $plugin.SourceRoot
+            })
+        }
     }
 
-    # Plugin buckets: Plugins/<PluginName>/<ModuleName>/ (ModuleName is the immediate subfolder
-    # under the plugin's Source\, i.e. the actual UBT module - Source\PCGExCore\..., Source\
-    # PCGExCoreEditor\..., etc. Keeping that level in the output tree means a later compaction
-    # pass merges per-module instead of flattening an entire plugin into one huge file.)
-    foreach ($pr in $pluginRoots) {
-        Get-ChildItem -Path $pr.SourceRoot -Filter "*.h" -Recurse -ErrorAction SilentlyContinue |
-            Where-Object {
-                $path = $_.FullName
-                if ($_.Name -match '\.generated\.h$') { return $false }
-                foreach ($seg in $alwaysExclude) {
-                    if ($path -match "\\$seg\\") { return $false }
-                }
-                return $true
-            } |
-            ForEach-Object {
-                $relFromSourceRoot = $_.FullName.Substring($pr.SourceRoot.Length).TrimStart('\')
-                $moduleName = ($relFromSourceRoot -split '\\')[0]
-                $headerRecords.Add([PSCustomObject]@{
-                    HeaderPath = $_.FullName
-                    BucketDir  = Join-Path "Plugins" (Join-Path $pr.PluginName $moduleName)
-                    SourceRoot = $pr.SourceRoot
-                }) | Out-Null
-            }
+    $uniqueHeaders = @(
+        $headers |
+        Group-Object { $_.HeaderPath.ToLowerInvariant() } |
+        ForEach-Object { $_.Group[0] } |
+        Sort-Object HeaderPath
+    )
+
+    if ($uniqueHeaders.Count -eq 0) {
+        Write-Host '[WARN] No eligible headers found.' -ForegroundColor Yellow
+        return
     }
 
-    if ($headerRecords.Count -eq 0) {
-        Write-Host "[WARN] No headers found in scan roots." -ForegroundColor Yellow
-        exit 0
+    if (-not $script:OutputDir) {
+        $script:OutputDir = Join-Path $resolvedRoot 'Documentation\generated-api\markdown\source'
     }
-    Write-Host "Found $($headerRecords.Count) header(s) to convert." -ForegroundColor Cyan
-
-    # Output directory
-    if (-not $OutputDir) {
-        $OutputDir = Join-Path $ProjectRoot "Documentation\generated-api\markdown\source"
+    else {
+        $script:OutputDir = Get-NormalizedFullPath $script:OutputDir
     }
-    Write-Host "Output dir   : $OutputDir`n" -ForegroundColor Cyan
 
-    # Flat output per bucket with collision-safe suffixes where needed.
+    Write-Section 'Header conversion'
+    Write-Host "Headers    : $($uniqueHeaders.Count)" -ForegroundColor Cyan
+    Write-Host "Output dir : $script:OutputDir" -ForegroundColor Cyan
+
     $nameCounts = @{}
-    foreach ($rec in $headerRecords) {
-        $baseName = [System.IO.Path]::GetFileNameWithoutExtension($rec.HeaderPath)
-        $key = "$($rec.BucketDir)||$baseName"
+    foreach ($record in $uniqueHeaders) {
+        $baseName = [System.IO.Path]::GetFileNameWithoutExtension($record.HeaderPath)
+        $key = "$($record.BucketDir)||$baseName"
         if (-not $nameCounts.ContainsKey($key)) { $nameCounts[$key] = 0 }
         $nameCounts[$key]++
     }
 
-    $ok = 0; $skipped = 0
-    foreach ($rec in $headerRecords) {
-        $h = $rec.HeaderPath
-        $rel = $h.Substring($ProjectRoot.Length).TrimStart('\\')
-        $baseName = [System.IO.Path]::GetFileNameWithoutExtension($h)
-        $countKey = "$($rec.BucketDir)||$baseName"
+    $converted = 0
+    $skipped = 0
+    $failed = 0
 
-        $mdName = "$baseName.md"
-        if ($nameCounts[$countKey] -gt 1) {
-            $sourceRel = $h.Substring($rec.SourceRoot.Length).TrimStart('\\')
-            $sourceDir = Split-Path -Parent $sourceRel
-            $suffix = if ($sourceDir) { ($sourceDir -replace '[\\/]+', '__') } else { 'Root' }
-            $mdName = "${baseName}__${suffix}.md"
+    foreach ($record in $uniqueHeaders) {
+        $baseName = [System.IO.Path]::GetFileNameWithoutExtension($record.HeaderPath)
+        $key = "$($record.BucketDir)||$baseName"
+        $markdownName = "$baseName.md"
+
+        if ($nameCounts[$key] -gt 1) {
+            $relativeSource = Get-RelativePathCompat $record.SourceRoot $record.HeaderPath
+            $sourceDirectory = Split-Path -Parent $relativeSource
+            $suffix = if ($sourceDirectory) { $sourceDirectory -replace '[\\/]+', '__' } else { 'Root' }
+            $markdownName = "${baseName}__${suffix}.md"
         }
 
-        $bucketDir = Join-Path $OutputDir $rec.BucketDir
-        $outMd = Join-Path $bucketDir $mdName
+        $outputPath = Join-Path (Join-Path $script:OutputDir $record.BucketDir) $markdownName
+        $relativeProjectPath = Get-RelativePathCompat $resolvedRoot $record.HeaderPath
+
         try {
-            Convert-SingleHeader $h $outMd $rel
-            $ok++
-        } catch {
+            $success = Convert-SingleHeader $record.HeaderPath $outputPath $relativeProjectPath -WhatIfOnly:$DryRun
+            if ($success) { $converted++ } else { $skipped++ }
+        }
+        catch {
             Write-Host "  [ERROR] $($_.Exception.Message)" -ForegroundColor Red
-            $skipped++
+            $failed++
         }
         Write-Host ""
     }
 
-    Write-Host "Done. Converted: $ok  Skipped: $skipped" -ForegroundColor Green
+    Write-Section 'Source scan summary'
+    Write-Host "Converted : $converted" -ForegroundColor Green
+    Write-Host "Skipped   : $skipped" -ForegroundColor Yellow
+    Write-Host "Failed    : $failed" -ForegroundColor $(if ($failed -gt 0) { 'Red' } else { 'Green' })
+    if ($DryRun) { Write-Host 'Dry run completed. No Markdown files were written.' -ForegroundColor Yellow }
 }
 
-if ($ScanContent) {
+# -----------------------------------------------------------------------------
+# Content scan
+# -----------------------------------------------------------------------------
 
-    # Resolve project root
-    if (-not $ProjectRoot) {
-        $ProjectRoot = Find-ProjectRoot (Get-Location).Path
-    }
-    if (-not $ProjectRoot -or -not (Test-Path $ProjectRoot)) {
-        Write-Host "[ERROR] Could not locate .uproject. Pass -ProjectRoot explicitly." -ForegroundColor Red
-        exit 1
-    }
-    $ProjectRoot = (Resolve-Path $ProjectRoot).Path
+function Convert-ToPythonRawString([string]$Value) {
+    return $Value.Replace("'", "\\'")
+}
 
-    $uprojectFiles = Get-ChildItem -LiteralPath $ProjectRoot -Filter '*.uproject' -File -ErrorAction SilentlyContinue
-    if (-not $uprojectFiles) {
-        Write-Host "[ERROR] No .uproject found under $ProjectRoot." -ForegroundColor Red
-        exit 1
-    }
-    $uprojectPath = $uprojectFiles[0].FullName
+function Invoke-ContentScan {
+    $resolvedRoot = Resolve-ProjectRoot
+    $uprojectPath = Get-UProjectPath $resolvedRoot
+    $editorCommand = Join-Path $EnginePath 'Engine\Binaries\Win64\UnrealEditor-Cmd.exe'
 
-    $editorCmd = Join-Path $EnginePath "Engine\Binaries\Win64\UnrealEditor-Cmd.exe"
-    if (-not (Test-Path $editorCmd)) {
-        Write-Host "[ERROR] UnrealEditor-Cmd.exe not found at $editorCmd. Pass -EnginePath explicitly." -ForegroundColor Red
-        exit 1
+    if (-not (Test-Path -LiteralPath $editorCommand -PathType Leaf)) {
+        throw "UnrealEditor-Cmd.exe not found: $editorCommand"
     }
 
-    $exporterScript = Join-Path $ProjectRoot "WeekendWarriorDevTools\tools\python\assets\export_blueprint_graph_docs.py"
-    if (-not (Test-Path $exporterScript)) {
-        Write-Host "[ERROR] Exporter script not found at $exporterScript." -ForegroundColor Red
-        exit 1
+    if (-not $script:ContentExporterScript) {
+        $candidatePaths = @(
+            (Join-Path $resolvedRoot 'WeekendWarriorDevTools\tools\python\assets\export_blueprint_graph_docs.py'),
+            (Join-Path $resolvedRoot 'tools\python\assets\export_blueprint_graph_docs.py')
+        )
+        $script:ContentExporterScript = $candidatePaths | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
     }
 
-    if (-not $ContentOutputDir) {
-        $ContentOutputDir = Join-Path $ProjectRoot "Documentation\generated-api\markdown\content"
+    if (-not $script:ContentExporterScript -or -not (Test-Path -LiteralPath $script:ContentExporterScript -PathType Leaf)) {
+        throw 'Content exporter not found. Pass -ContentExporterScript explicitly.'
     }
 
-    # PythonScriptCommandlet's -Script= runs exactly one file with no argv, so bridge parameters
-    # through a tiny generated bootstrap script that imports the real exporter module and calls
-    # it with this invocation's -ContentOutputDir/-ExcludePlugins.
-    $exporterDir      = Split-Path -Parent $exporterScript
-    $excludePluginsPy = "[" + (($ExcludePlugins | ForEach-Object { "r'$_'" }) -join ", ") + "]"
-    $bootstrapPath    = Join-Path $env:TEMP "cr_export_content_docs_bootstrap.py"
+    if (-not $script:ContentOutputDir) {
+        $script:ContentOutputDir = Join-Path $resolvedRoot 'Documentation\generated-api\markdown\content'
+    }
 
-    $bootstrapLines = @(
-        "import sys",
-        "sys.path.insert(0, r'$exporterDir')",
-        "import export_blueprint_graph_docs as ebgd",
-        "ebgd.export_all_content_docs(output_dir=r'$ContentOutputDir', exclude_plugins=$excludePluginsPy)"
+    $exporterDirectory = Split-Path -Parent $script:ContentExporterScript
+    $escapedExporterDirectory = Convert-ToPythonRawString $exporterDirectory
+    $escapedOutputDirectory = Convert-ToPythonRawString $script:ContentOutputDir
+    $pythonExclusions = '[' + (($ExcludePlugins | ForEach-Object { "r'$(Convert-ToPythonRawString $_)'" }) -join ', ') + ']'
+    $bootstrapPath = Join-Path $env:TEMP 'wws_export_content_docs_bootstrap.py'
+
+    $bootstrap = @(
+        'import sys',
+        "sys.path.insert(0, r'$escapedExporterDirectory')",
+        'import export_blueprint_graph_docs as exporter',
+        "exporter.export_all_content_docs(output_dir=r'$escapedOutputDirectory', exclude_plugins=$pythonExclusions)"
     )
-    Set-Content -LiteralPath $bootstrapPath -Value $bootstrapLines -Encoding UTF8
 
-    Write-Host "Project root   : $ProjectRoot" -ForegroundColor Cyan
-    Write-Host "Editor         : $editorCmd" -ForegroundColor Cyan
-    Write-Host "Content output : $ContentOutputDir" -ForegroundColor Cyan
-    Write-Host ""
+    if (-not $DryRun) {
+        Set-Content -LiteralPath $bootstrapPath -Value $bootstrap -Encoding UTF8
+    }
 
-    $editorArgs = @(
+    $arguments = @(
         "`"$uprojectPath`"",
-        "-run=pythonscript",
+        '-run=pythonscript',
         "-Script=`"$bootstrapPath`"",
-        "-unattended",
-        "-nopause",
-        "-nosplash",
-        "-stdout",
-        "-FullStdOutLogOutput"
+        '-unattended',
+        '-nopause',
+        '-nosplash',
+        '-stdout',
+        '-FullStdOutLogOutput'
     )
+
+    Write-Section 'Content scan configuration'
+    Write-Host "Project file : $uprojectPath" -ForegroundColor Cyan
+    Write-Host "Editor       : $editorCommand" -ForegroundColor Cyan
+    Write-Host "Exporter     : $script:ContentExporterScript" -ForegroundColor Cyan
+    Write-Host "Output       : $script:ContentOutputDir" -ForegroundColor Cyan
 
     if ($DryRun) {
-        Write-Host "[DRY RUN] Would run:" -ForegroundColor Yellow
-        Write-Host "  `"$editorCmd`" $($editorArgs -join ' ')" -ForegroundColor Yellow
-    } else {
-        Write-Host "Launching headless editor to scan Blueprints, PCG/Voxel graphs, and Data Assets..." -ForegroundColor Cyan
-        & $editorCmd @editorArgs
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "[ERROR] Editor content scan failed with exit code $LASTEXITCODE." -ForegroundColor Red
-            exit $LASTEXITCODE
-        }
-        Write-Host "Content scan complete." -ForegroundColor Green
+        Write-Host ''
+        Write-Host '[DRY RUN] Bootstrap content:' -ForegroundColor Yellow
+        $bootstrap | ForEach-Object { Write-Host "  $_" -ForegroundColor DarkYellow }
+        Write-Host ''
+        Write-Host '[DRY RUN] Command:' -ForegroundColor Yellow
+        Write-Host "`"$editorCommand`" $($arguments -join ' ')" -ForegroundColor Yellow
+        return
     }
+
+    & $editorCommand @arguments
+    if ($LASTEXITCODE -ne 0) {
+        throw "Editor content scan failed with exit code $LASTEXITCODE."
+    }
+
+    Write-Host 'Content scan completed.' -ForegroundColor Green
 }
 
-if (-not $ScanAll -and -not $ScanContent) {
+# -----------------------------------------------------------------------------
+# Entrypoint
+# -----------------------------------------------------------------------------
 
-    # Single-file mode
-    if (-not $HeaderFile) {
-        Write-Host "Provide a .h file path, or use -ScanAll / -ScanContent to batch-convert." -ForegroundColor Red
-        exit 1
-    }
-    if (-not (Test-Path $HeaderFile)) {
-        Write-Host "File not found: $HeaderFile" -ForegroundColor Red
-        exit 1
-    }
-    if ($HeaderFile -notmatch '\.h$') {
-        Write-Host "Expected a .h file." -ForegroundColor Red
-        exit 1
-    }
+try {
+    if ($ScanAll) { Invoke-SourceScan }
+    if ($ScanContent) { Invoke-ContentScan }
 
-    $HeaderFile = (Resolve-Path $HeaderFile).Path
+    if (-not $ScanAll -and -not $ScanContent) {
+        if (-not $HeaderFile) {
+            throw 'Provide a .h file, or use -ScanAll and/or -ScanContent.'
+        }
 
-    if (-not $Output) {
-        $baseName = [System.IO.Path]::GetFileNameWithoutExtension($HeaderFile)
-        $Output   = Join-Path (Split-Path -Parent $HeaderFile) "$baseName.md"
+        if (-not (Test-Path -LiteralPath $HeaderFile -PathType Leaf)) {
+            throw "Header file not found: $HeaderFile"
+        }
+
+        if ([System.IO.Path]::GetExtension($HeaderFile) -ine '.h') {
+            throw 'Single-file mode requires a .h file.'
+        }
+
+        $HeaderFile = (Resolve-Path -LiteralPath $HeaderFile).Path
+        if (-not $Output) {
+            $Output = [System.IO.Path]::ChangeExtension($HeaderFile, '.md')
+        }
+
+        [void](Convert-SingleHeader $HeaderFile $Output -WhatIfOnly:$DryRun)
     }
-
-    Convert-SingleHeader $HeaderFile $Output
+}
+catch {
+    Write-Host "[ERROR] $($_.Exception.Message)" -ForegroundColor Red
+    exit 1
 }
