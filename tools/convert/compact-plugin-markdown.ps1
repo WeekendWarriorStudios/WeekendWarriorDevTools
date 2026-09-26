@@ -6,24 +6,29 @@
     few size-capped) sibling Markdown file(s).
 
 .DESCRIPTION
-    Each folder directly beneath -ParentFolder is recursively scanned for .md
-    files. Every Markdown file belonging to that folder is merged into sibling
-    file(s) named after the folder itself.
+    Folders found two levels beneath -ParentFolder are each recursively
+    scanned for .md files. Every Markdown file belonging to one of those
+    folders is merged into sibling file(s) named after the folder itself.
 
-        Plugins\PoseSearch\Runtime\PoseSearchLibrary.md   ->   Plugins\PoseSearch.md
+    Pointing -ParentFolder at markdown\generated-api targets
+    markdown\generated-api\*\* (e.g. markdown\generated-api\source\PoseSearch),
+    so each plugin/module folder is compacted on its own rather than every
+    folder under -ParentFolder being flattened into one another.
+
+        source\Plugins\PoseSearch\Runtime\PoseSearchLibrary.md   ->   source\Plugins\PoseSearch.md
 
     If the combined word count exceeds -MaxWordsPerFile, the output is split:
 
-        Plugins\PoseSearch_1.md
-        Plugins\PoseSearch_2.md
+        source\Plugins\PoseSearch_1.md
+        source\Plugins\PoseSearch_2.md
 
     The source folder is deleted only after every output file has been written
     successfully. If a write fails, any partial outputs are removed and the
     source folder is left untouched.
 
     Nothing about this script is plugin-specific. -ParentFolder simply means
-    "the folder whose direct children get compacted", so it works equally on
-    markdown\source\Plugins and markdown\content\Animation.
+    "the folder two levels above the folders that get compacted", so it works
+    equally on markdown\source\Plugins\* and markdown\content\Animation\*.
 
 .PARAMETER ParentFolder
     The folder containing the documentation directories to compact.
@@ -33,20 +38,21 @@
     Maximum approximate word count per output file. Default is 400000.
 
 .PARAMETER FolderName
-    Optional. Compacts only the named child folder.
+    Optional. Compacts only the folder at this path relative to -ParentFolder
+    (may include subfolders, e.g. "source\PoseSearch").
     Alias: -PluginName
 
 .PARAMETER DryRun
     Reports what would happen without writing or deleting anything.
 
 .EXAMPLE
-    .\compact-plugin-markdown.ps1 -ParentFolder "Documentation\generated-api\markdown\source\Plugins" -DryRun
+    .\compact-plugin-markdown.ps1 -ParentFolder "Documentation\generated-api\markdown" -DryRun
 
 .EXAMPLE
     .\compact-plugin-markdown.ps1 -ParentFolder "Documentation\generated-api\markdown\content\Animation"
 
 .EXAMPLE
-    .\compact-plugin-markdown.ps1 -ParentFolder "Documentation\generated-api\markdown\source\Plugins" -FolderName "PoseSearch" -DryRun
+    .\compact-plugin-markdown.ps1 -ParentFolder "Documentation\generated-api\markdown" -FolderName "source\Plugins\PoseSearch" -DryRun
 #>
 
 [CmdletBinding()]
@@ -341,19 +347,28 @@ if ($FolderName) {
     $targetFolders = @(Get-Item -LiteralPath $selectedPath)
 }
 else {
+    # Compaction units live two levels beneath -ParentFolder (ParentFolder\*\*),
+    # e.g. markdown\source\PoseSearch, not markdown\source itself. Going only
+    # one level deep would flatten every module under "source" into one file.
+    $firstLevel = @(
+        Get-ChildItem -LiteralPath $ParentFolder -Directory
+    )
+
     $targetFolders = @(
-        Get-ChildItem -LiteralPath $ParentFolder -Directory | Sort-Object Name
+        $firstLevel |
+        ForEach-Object { Get-ChildItem -LiteralPath $_.FullName -Directory } |
+        Sort-Object FullName
     )
 }
 
 if ($targetFolders.Count -eq 0) {
-    Write-Host "[WARN] No child folders found under $ParentFolder" -ForegroundColor Yellow
+    Write-Host "[WARN] No folders found two levels under $ParentFolder" -ForegroundColor Yellow
     return
 }
 
 Write-Host ""
 Write-Host "Parent folder      : $ParentFolder" -ForegroundColor Cyan
-Write-Host "Child folders      : $($targetFolders.Count)" -ForegroundColor Cyan
+Write-Host "Target folders     : $($targetFolders.Count)" -ForegroundColor Cyan
 Write-Host "Maximum words/file : $MaxWordsPerFile" -ForegroundColor Cyan
 Write-Host "Dry run            : $([bool]$DryRun)" -ForegroundColor Cyan
 Write-Host ""
