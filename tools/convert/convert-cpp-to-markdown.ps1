@@ -79,7 +79,7 @@ param(
     [string]$OutputDir = "",
     [string]$ContentOutputDir = "",
     [string[]]$ExcludePlugins = @(),
-    [string]$EnginePath = "A:\GE\UE_5.8",
+    [string]$EnginePath = "",
     [string]$ContentExporterScript = "",
     [switch]$DryRun
 )
@@ -759,8 +759,8 @@ function New-PluginDescriptorIndex([string]$ResolvedProjectRoot, [string]$Resolv
     $searchRoots = [System.Collections.Generic.List[PSCustomObject]]::new()
     $searchRoots.Add([PSCustomObject]@{ Path = $ResolvedProjectRoot; Priority = 0; Origin = 'Project' })
 
-    $enginePluginsRoot = Join-Path $ResolvedEnginePath 'Engine\Plugins'
-    if (Test-Path -LiteralPath $enginePluginsRoot -PathType Container) {
+    $enginePluginsRoot = if ($ResolvedEnginePath) { Join-Path $ResolvedEnginePath 'Engine\Plugins' } else { '' }
+    if ($enginePluginsRoot -and (Test-Path -LiteralPath $enginePluginsRoot -PathType Container)) {
         $searchRoots.Add([PSCustomObject]@{ Path = $enginePluginsRoot; Priority = 1; Origin = 'Engine' })
     }
 
@@ -854,7 +854,7 @@ function Invoke-SourceScan {
     Write-Section 'Source scan configuration'
     Write-Host "Project root : $resolvedRoot" -ForegroundColor Cyan
     Write-Host "Project file : $uprojectPath" -ForegroundColor Cyan
-    Write-Host "Engine root  : $EnginePath" -ForegroundColor Cyan
+    Write-Host "Engine root  : $(if ($EnginePath) { $EnginePath } else { '(not set - engine plugins skipped)' })" -ForegroundColor Cyan
 
     $explicitNames = @(Find-EnabledUProjectPlugins $uprojectPath)
     $descriptorIndex = New-PluginDescriptorIndex $resolvedRoot $EnginePath
@@ -984,6 +984,9 @@ function Convert-ToPythonRawString([string]$Value) {
 function Invoke-ContentScan {
     $resolvedRoot = Resolve-ProjectRoot
     $uprojectPath = Get-UProjectPath $resolvedRoot
+    if (-not $EnginePath) {
+        throw 'Content scan requires -EnginePath.'
+    }
     $editorCommand = Join-Path $EnginePath 'Engine\Binaries\Win64\UnrealEditor-Cmd.exe'
 
     if (-not (Test-Path -LiteralPath $editorCommand -PathType Leaf)) {
