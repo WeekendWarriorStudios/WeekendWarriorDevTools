@@ -11,17 +11,19 @@
 
     2. Target plugin mode (-TargetPlugin)
        Scans only the specified plugin (by folder path or plugin name) and writes a single
-       flattened Markdown file (<PluginName>.md) unless -NoFlatten is specified.
+         flattened Markdown file under Plugins\Custom or Plugins\Engine unless -NoFlatten is specified.
 
     3. Source scan mode (-ScanAll)
-       Scans the project's Source folder and every enabled plugin with a C++ Source folder,
-       writing one flattened Markdown file per plugin (and Project.md) unless -NoFlatten is specified.
+         Scans the project's Source folder, all project-local plugins, and enabled engine plugins
+         with a C++ Source folder. Plugin output is separated into Plugins\Custom and Plugins\Engine.
+         Flattened output is used unless -NoFlatten is specified.
 
     4. Content scan mode (-ScanContent)
        Runs UnrealEditor-Cmd.exe with a Python bootstrap to export documentation for
        Blueprints, graph assets, and Data Assets.
 
-    Source scans default to scanning the project and enabled plugins. They maintain
+    Source scans default to scanning the project, all project-local plugins, and enabled
+    engine plugins. They maintain
     Documentation\generated-api\markdown\source\manifest.json and only regenerate
     new or changed headers. Plugin release timestamps use the .uplugin file's UTC
     modification time because the descriptor has no standard release-date field.
@@ -33,7 +35,7 @@
     Markdown output path in single-file mode.
 
 .PARAMETER ScanAll
-    Recursively scan project and enabled-plugin C++ headers.
+    Recursively scan project, all project-local plugin, and enabled engine-plugin C++ headers.
 
 .PARAMETER TargetPlugin
     Optional plugin name (e.g., "PCGExtendedToolkit") or full plugin directory path
@@ -1022,8 +1024,15 @@ function Invoke-SourceScan {
         Write-Host "Engine root  : $(if ($EnginePath) {$EnginePath } else { '(not set - engine plugins skipped)' })" -ForegroundColor Cyan
         $explicitNames = @(Find-EnabledUProjectPlugins $uprojectPath)
         $descriptorIndex = New-PluginDescriptorIndex $resolvedRoot $EnginePath
-        $enabledNames = @(Resolve-EnabledPluginNames $explicitNames $descriptorIndex $ExcludePlugins)
+        $projectPluginNames = @(
+            $descriptorIndex.Values |
+            Where-Object { $_.Origin -eq 'Project' } |
+            ForEach-Object { $_.PluginName }
+        )
+        $initialPluginNames = @($explicitNames + $projectPluginNames | Sort-Object -Unique)
+        $enabledNames = @(Resolve-EnabledPluginNames $initialPluginNames $descriptorIndex $ExcludePlugins)
         Write-Host "Explicit plugins : $($explicitNames.Count)" -ForegroundColor Cyan
+        Write-Host "Project plugins  : $($projectPluginNames.Count)" -ForegroundColor Cyan
     }
 
     Write-Host "Resolved plugins : $($enabledNames.Count)" -ForegroundColor Cyan
@@ -1101,14 +1110,16 @@ function Invoke-SourceScan {
             $relative = Get-RelativePathCompat $plugin.SourceRoot $_.FullName
             $parts = $relative -split '[\\/]'
             $moduleName = if ($parts.Count -gt 1) { $parts[0] } else { 'Root' }
+            $pluginOutputCategory = if ($plugin.Origin -eq 'Engine') { 'Engine' } else { 'Custom' }
+            $pluginOutputRoot = Join-Path 'Plugins' $pluginOutputCategory
 
             $headers.Add([PSCustomObject]@{
                 HeaderPath = $_.FullName
-                BucketDir = Join-Path 'Plugins' (Join-Path $plugin.PluginName $moduleName)
+                BucketDir = Join-Path $pluginOutputRoot (Join-Path $plugin.PluginName $moduleName)
                 SourceRoot = $plugin.SourceRoot
                 GroupKey = "Plugin::$($plugin.PluginName)"
                 GroupTitle = $plugin.PluginName
-                FlatRelOut = Join-Path 'Plugins' "$($plugin.PluginName).md"
+                FlatRelOut = Join-Path $pluginOutputRoot "$($plugin.PluginName).md"
                 ModuleName = $moduleName
                 PluginName = $plugin.PluginName
                 PluginReleaseTimestampUtc = $pluginReleases[$plugin.PluginName].PluginReleaseTimestampUtc
@@ -1405,6 +1416,23 @@ function Invoke-SourceScan {
                             Join-Path $script:OutputDir 'Plugins'
                         }
                         Remove-EmptyParentDirectories $legacyPath $directoryBoundary
+                    }
+                }
+
+                $oldFlatRelativePath = Get-ManifestEntryValue $entry 'FlatOutputPath'
+                if ($oldFlatRelativePath) {
+                    $oldFlatPath = Join-Path $script:OutputDir $oldFlatRelativePath
+                    $oldFlatPathIsReferenced = @($manifestEntries | Where-Object {
+                        $candidatePath = Get-ManifestEntryValue $_ 'FlatOutputPath'
+                        $candidatePath -and
+                        (Get-NormalizedFullPath (Join-Path $script:OutputDir $candidatePath)) -eq
+                        (Get-NormalizedFullPath $oldFlatPath)
+                    }).Count -gt 0
+
+                    if (-not $oldFlatPathIsReferenced -and
+                        (Test-PathWithinRoot $oldFlatPath $script:OutputDir) -and
+                        (Test-Path -LiteralPath $oldFlatPath -PathType Leaf)) {
+                        Remove-Item -LiteralPath $oldFlatPath -Force
                     }
                 }
             }
