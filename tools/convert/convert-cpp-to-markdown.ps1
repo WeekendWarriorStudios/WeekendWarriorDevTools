@@ -989,6 +989,17 @@ function Get-ManifestEntryValue($Entry, [string]$PropertyName) {
     return $property.Value
 }
 
+function Remove-EmptyParentDirectories([string]$Path, [string]$StopAt) {
+    $current = Split-Path -Parent $Path
+    $stop = Get-NormalizedFullPath $StopAt
+    while ($current -and (Test-PathWithinRoot $current $stop) -and $current -ne $stop) {
+        $children = @(Get-ChildItem -LiteralPath $current -Force -ErrorAction SilentlyContinue)
+        if ($children.Count -gt 0) { break }
+        Remove-Item -LiteralPath $current -Force
+        $current = Split-Path -Parent $current
+    }
+}
+
 function Invoke-SourceScan {
     $resolvedRoot = Resolve-ProjectRoot
     $uprojectPath = Get-UProjectPath $resolvedRoot
@@ -1186,11 +1197,18 @@ function Invoke-SourceScan {
 
         $markdownName = "$entryStem.md"
         $outputPath = Join-Path (Join-Path $script:OutputDir $record.BucketDir) $markdownName
-        $cachePath = Join-Path (Join-Path $script:OutputDir '.cache') (Join-Path $record.BucketDir $markdownName)
         $flatOutputPath = Join-Path $script:OutputDir $record.FlatRelOut
         $relativeProjectPath = Get-RelativePathCompat $resolvedRoot $record.HeaderPath
         $previous = if ($previousEntries.ContainsKey($sourceKey)) { $previousEntries[$sourceKey] } else { $null }
-        $expectedArtifact = if ($NoFlatten) { $outputPath } else { $cachePath }
+        $cachedMarkdown = Get-ManifestEntryValue $previous 'CachedMarkdown'
+        $legacyCachePath = Get-ManifestEntryValue $previous 'CachePath'
+        if ($null -eq $cachedMarkdown -and $legacyCachePath) {
+            $legacyCacheFullPath = Join-Path $script:OutputDir $legacyCachePath
+            if ((Test-PathWithinRoot $legacyCacheFullPath $script:OutputDir) -and
+                (Test-Path -LiteralPath $legacyCacheFullPath -PathType Leaf)) {
+                $cachedMarkdown = Get-Content -LiteralPath $legacyCacheFullPath -Raw -Encoding UTF8
+            }
+        }
         $pluginVersion = ''
         $pluginVersionName = ''
         if ($record.PluginName) {
@@ -1207,9 +1225,11 @@ function Invoke-SourceScan {
                 (Get-ManifestEntryValue $previous 'PluginVersionName') -ne $pluginVersionName)
         $previousHasDocumentation = $null -ne $previous -and
             [bool](Get-ManifestEntryValue $previous 'HasDocumentation')
-        $artifactMissing = -not (Test-Path -LiteralPath $expectedArtifact -PathType Leaf) -and
-            ($null -eq $previous -or $previousHasDocumentation)
-        $needsParse = $sourceChanged -or $releaseChanged -or $artifactMissing
+        $flatOutputMissing = -not (Test-Path -LiteralPath $flatOutputPath -PathType Leaf)
+        $individualOutputMissing = -not (Test-Path -LiteralPath $outputPath -PathType Leaf)
+        $cacheContentMissing = $previousHasDocumentation -and $null -eq $cachedMarkdown
+        $artifactMissing = if ($NoFlatten) { $individualOutputMissing } else { $flatOutputMissing }
+        $needsParse = $sourceChanged -or $releaseChanged -or $cacheContentMissing -or ($NoFlatten -and $artifactMissing)
         $status = if ($null -eq $previous) { 'New' }
             elseif ($sourceChanged -or $releaseChanged) { 'Updated' }
             elseif ($artifactMissing) { 'Rebuilt' }
@@ -1241,26 +1261,27 @@ function Invoke-SourceScan {
             if ($needsParse) {
                 $markdown = Build-HeaderMarkdownContent $record.HeaderPath $relativeProjectPath
                 if ($null -ne $markdown) {
+                    $cachedMarkdown = $markdown
                     $converted++
-                    if (-not $DryRun) {
-                        $artifactPath = if ($NoFlatten) { $outputPath } else { $cachePath }
-                        $parent = Split-Path -Parent $artifactPath
+                    if (-not $DryRun -and $NoFlatten) {
+                        $parent = Split-Path -Parent $outputPath
                         if ($parent -and -not (Test-Path -LiteralPath $parent)) {
                             New-Item -ItemType Directory -Path $parent -Force | Out-Null
                         }
-                        [System.IO.File]::WriteAllText($artifactPath, $markdown, [System.Text.UTF8Encoding]::new($false))
+                        [System.IO.File]::WriteAllText($outputPath, $markdown, [System.Text.UTF8Encoding]::new($false))
                     }
                 }
                 else {
+                    $cachedMarkdown = ''
                     $skipped++
-                    if (-not $DryRun -and (Test-Path -LiteralPath $expectedArtifact -PathType Leaf)) {
-                        Remove-Item -LiteralPath $expectedArtifact -Force
+                    if (-not $DryRun -and $NoFlatten -and (Test-Path -LiteralPath $outputPath -PathType Leaf)) {
+                        Remove-Item -LiteralPath $outputPath -Force
                     }
                 }
             }
             elseif (-not $NoFlatten) {
-                if ($previous.HasDocumentation) {
-                    $markdown = Get-Content -LiteralPath $cachePath -Raw -Encoding UTF8
+                if ($previousHasDocumentation) {
+                    $markdown = $cachedMarkdown
                 }
                 else {
                     $skipped++
@@ -1291,9 +1312,9 @@ function Invoke-SourceScan {
                 GroupTitle = $record.GroupTitle
                 EntryId = "$($record.ModuleName)\\$entryStem"
                 OutputPath = Get-RelativePathCompat $script:OutputDir $outputPath
-                CachePath = Get-RelativePathCompat $script:OutputDir $cachePath
                 FlatOutputPath = Get-RelativePathCompat $script:OutputDir $flatOutputPath
-                HasDocumentation = ($null -ne $markdown -or (-not $needsParse -and $null -ne $previous -and $previous.HasDocumentation))
+                CachedMarkdown = $cachedMarkdown
+                HasDocumentation = ($null -ne $markdown -or $previousHasDocumentation) -and $cachedMarkdown -ne ''
             })
         }
         catch {
@@ -1326,10 +1347,13 @@ function Invoke-SourceScan {
             else { $flattenedGroups[$removedEntry.GroupKey].NeedsWrite = $true }
         }
         if (-not $DryRun) {
-            $stalePath = if ($NoFlatten) { Join-Path $script:OutputDir $removedEntry.OutputPath }
-                else { Join-Path $script:OutputDir $removedEntry.CachePath }
-            if ($stalePath -and (Test-PathWithinRoot $stalePath $script:OutputDir) -and (Test-Path -LiteralPath $stalePath -PathType Leaf)) {
-                Remove-Item -LiteralPath $stalePath -Force
+            $stalePaths = @($removedEntry.OutputPath, (Get-ManifestEntryValue $removedEntry 'CachePath'))
+            foreach ($staleRelativePath in $stalePaths) {
+                if (-not $staleRelativePath) { continue }
+                $stalePath = Join-Path $script:OutputDir $staleRelativePath
+                if ((Test-PathWithinRoot $stalePath $script:OutputDir) -and (Test-Path -LiteralPath $stalePath -PathType Leaf)) {
+                    Remove-Item -LiteralPath $stalePath -Force
+                }
             }
         }
     }
@@ -1347,15 +1371,18 @@ function Invoke-SourceScan {
                 }
                 continue
             }
+
             $entryCount = $group.Entries.Count
             if ($DryRun) {
                 Write-Host "  [DRY RUN] $($group.GroupTitle) ($entryCount entries) -> $flatPath" -ForegroundColor Yellow
                 continue
             }
+
             $parent = Split-Path -Parent $flatPath
             if ($parent -and -not (Test-Path -LiteralPath $parent)) {
                 New-Item -ItemType Directory -Path $parent -Force | Out-Null
             }
+
             $flatMarkdown = Generate-FlattenedMarkdown $group.GroupTitle $group.Entries.ToArray()
             [System.IO.File]::WriteAllText($flatPath, $flatMarkdown, [System.Text.UTF8Encoding]::new($false))
             Write-Host "  Written: $flatPath ($entryCount entries)" -ForegroundColor Green
@@ -1363,6 +1390,26 @@ function Invoke-SourceScan {
     }
 
     if (-not $DryRun) {
+        if (-not $NoFlatten) {
+            foreach ($entry in $previousEntries.Values) {
+                foreach ($legacyRelativePath in @($entry.OutputPath, (Get-ManifestEntryValue $entry 'CachePath'))) {
+                    if (-not $legacyRelativePath) { continue }
+                    $legacyPath = Join-Path $script:OutputDir $legacyRelativePath
+                    if ((Test-PathWithinRoot $legacyPath $script:OutputDir) -and
+                        (Test-Path -LiteralPath $legacyPath -PathType Leaf)) {
+                        Remove-Item -LiteralPath $legacyPath -Force
+                        $directoryBoundary = if ($legacyRelativePath -match '(^|[\\/])\.cache([\\/]|$)') {
+                            Join-Path $script:OutputDir '.cache'
+                        }
+                        else {
+                            Join-Path $script:OutputDir 'Plugins'
+                        }
+                        Remove-EmptyParentDirectories $legacyPath $directoryBoundary
+                    }
+                }
+            }
+        }
+
         $manifest = [PSCustomObject]@{
             FormatVersion = 1
             GeneratedAtUtc = [DateTime]::UtcNow.ToString('o')
