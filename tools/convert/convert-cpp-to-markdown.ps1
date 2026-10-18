@@ -884,12 +884,18 @@ function Resolve-TargetPluginRecord([string]$Target, $DescriptorIndex) {
             $descriptorPath = "(directory target) $resolvedTarget"
         }
 
+        $origin = 'Project'
+        if ($script:EnginePath) {
+            $enginePluginsRoot = Join-Path $script:EnginePath 'Engine\Plugins'
+            if (Test-PathWithinRoot $pluginRoot $enginePluginsRoot) { $origin = 'Engine' }
+        }
+
         $record = [PSCustomObject]@{
             PluginName = $pluginName
             DescriptorPath = $descriptorPath
             PluginRoot = $pluginRoot
             SourceRoot = Join-Path $pluginRoot 'Source'
-            Origin = 'TargetPlugin'
+            Origin = $origin
             Priority = -1
         }
 
