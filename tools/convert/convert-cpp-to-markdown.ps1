@@ -21,6 +21,11 @@
        Runs UnrealEditor-Cmd.exe with a Python bootstrap to export documentation for
        Blueprints, graph assets, and Data Assets.
 
+    Source scans default to scanning the project and enabled plugins. They maintain
+    Documentation\generated-api\markdown\source\manifest.json and only regenerate
+    new or changed headers. Plugin release timestamps use the .uplugin file's UTC
+    modification time because the descriptor has no standard release-date field.
+
 .PARAMETER HeaderFile
     Header to convert in single-file mode.
 
@@ -820,11 +825,11 @@ function New-PluginDescriptorIndex([string]$ResolvedProjectRoot, [string]$Resolv
     $searchRoots.Add([PSCustomObject]@{ Path = $ResolvedProjectRoot; Priority = 0; Origin = 'Project' })
 
     $enginePluginsRoot = if ($ResolvedEnginePath) { Join-Path $ResolvedEnginePath 'Engine\Plugins' } else { '' }
-    if ($enginePluginsRoot -and (Test-Path -LiteralPath$enginePluginsRoot -PathType Container)) {
-        $searchRoots.Add([PSCustomObject]@{ Path =$enginePluginsRoot; Priority = 1; Origin = 'Engine' })
+    if ($enginePluginsRoot -and (Test-Path -LiteralPath $enginePluginsRoot -PathType Container)) {
+        $searchRoots.Add([PSCustomObject]@{ Path = $enginePluginsRoot; Priority = 1; Origin = 'Engine' })
     }
 
-    foreach ($searchRoot in$searchRoots) {
+    foreach ($searchRoot in $searchRoots) {
         Get-ChildItem -LiteralPath $searchRoot.Path -Filter '*.uplugin' -Recurse -File -ErrorAction SilentlyContinue |
         Where-Object { -not (Test-PathHasExcludedSegment $_.FullName $excludedSegments) } |
         ForEach-Object {
@@ -837,7 +842,8 @@ function New-PluginDescriptorIndex([string]$ResolvedProjectRoot, [string]$Resolv
                 Priority = $searchRoot.Priority
             }
 
-            if (-not $index.ContainsKey($_.BaseName) -or $record.Priority -lt$index[$_.BaseName].Priority) {$index[$_.BaseName] =$record
+            if (-not $index.ContainsKey($_.BaseName) -or $record.Priority -lt $index[$_.BaseName].Priority) {
+                $index[$_.BaseName] = $record
             }
         }
     }
@@ -845,34 +851,34 @@ function New-PluginDescriptorIndex([string]$ResolvedProjectRoot, [string]$Resolv
     return $index
 }
 
-function Resolve-TargetPluginRecord([string]$Target,$DescriptorIndex) {
+function Resolve-TargetPluginRecord([string]$Target, $DescriptorIndex) {
     if (Test-Path -LiteralPath $Target) {
-        $resolvedTarget = (Resolve-Path -LiteralPath$Target).Path
-        $upluginFile =$null
+        $resolvedTarget = (Resolve-Path -LiteralPath $Target).Path
+        $upluginFile = $null
 
         if (Test-Path -LiteralPath $resolvedTarget -PathType Leaf) {
             if ([System.IO.Path]::GetExtension($resolvedTarget) -ieq '.uplugin') {
-                $upluginFile = Get-Item -LiteralPath$resolvedTarget
+                $upluginFile = Get-Item -LiteralPath $resolvedTarget
             }
             else {
                 throw "TargetPlugin file must be a .uplugin descriptor or plugin directory: $Target"
             }
         }
         else {
-            $upluginFile = Get-ChildItem -LiteralPath$resolvedTarget -Filter '*.uplugin' -File -ErrorAction SilentlyContinue | Select-Object -First 1
+            $upluginFile = Get-ChildItem -LiteralPath $resolvedTarget -Filter '*.uplugin' -File -ErrorAction SilentlyContinue | Select-Object -First 1
             if (-not $upluginFile) {
-                $upluginFile = Get-ChildItem -LiteralPath$resolvedTarget -Filter '*.uplugin' -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
+                $upluginFile = Get-ChildItem -LiteralPath $resolvedTarget -Filter '*.uplugin' -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
             }
         }
 
         if ($upluginFile) {
-            $pluginRoot =$upluginFile.Directory.FullName
-            $pluginName =$upluginFile.BaseName
-            $descriptorPath =$upluginFile.FullName
+            $pluginRoot = $upluginFile.Directory.FullName
+            $pluginName = $upluginFile.BaseName
+            $descriptorPath = $upluginFile.FullName
         }
         else {
-            $pluginRoot =$resolvedTarget
-            $pluginName = Split-Path -Leaf$resolvedTarget
+            $pluginRoot = $resolvedTarget
+            $pluginName = Split-Path -Leaf $resolvedTarget
             $descriptorPath = "(directory target) $resolvedTarget"
         }
 
@@ -885,15 +891,17 @@ function Resolve-TargetPluginRecord([string]$Target,$DescriptorIndex) {
             Priority = -1
         }
 
-        $DescriptorIndex[$pluginName] =$record
+        $DescriptorIndex[$pluginName] = $record
         return $pluginName
     }
 
     return $Target
 }
 
-function Resolve-EnabledPluginNames([string[]]$InitialNames,$DescriptorIndex, [string[]]$ExcludedNames) {$resolved = New-CaseInsensitiveSet
-    $excluded = New-CaseInsensitiveSet$pending = [System.Collections.Generic.Queue[string]]::new()
+function Resolve-EnabledPluginNames([string[]]$InitialNames, $DescriptorIndex, [string[]]$ExcludedNames) {
+    $resolved = New-CaseInsensitiveSet
+    $excluded = New-CaseInsensitiveSet
+    $pending = [System.Collections.Generic.Queue[string]]::new()
 
     foreach ($name in @($ExcludedNames)) { if ($name) { [void]$excluded.Add($name) } }
     foreach ($name in @($InitialNames)) {
@@ -901,7 +909,7 @@ function Resolve-EnabledPluginNames([string[]]$InitialNames,$DescriptorIndex, [s
     }
 
     while ($pending.Count -gt 0) {
-        $pluginName =$pending.Dequeue()
+        $pluginName = $pending.Dequeue()
         if ($resolved.Contains($pluginName) -or $excluded.Contains($pluginName)) { continue }
         [void]$resolved.Add($pluginName)
 
@@ -949,9 +957,41 @@ function Find-EnabledPluginSourceRoots([string[]]$EnabledNames,$DescriptorIndex,
 # Source scan
 # -----------------------------------------------------------------------------
 
+function Test-PathWithinRoot([string]$Path, [string]$Root) {
+    $normalizedPath = Get-NormalizedFullPath $Path
+    $normalizedRoot = Get-NormalizedFullPath $Root
+    return $normalizedPath.StartsWith(
+        $normalizedRoot + [System.IO.Path]::DirectorySeparatorChar,
+        [System.StringComparison]::OrdinalIgnoreCase
+    ) -or $normalizedPath -eq $normalizedRoot
+}
+
+function Get-ExistingDocumentationManifest([string]$ManifestPath) {
+    if (-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)) {
+        return [PSCustomObject]@{ Entries = @() }
+    }
+
+    try {
+        $manifest = Get-Content -LiteralPath $ManifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        if ($null -eq $manifest.Entries) { $manifest | Add-Member -NotePropertyName Entries -NotePropertyValue @() }
+        return $manifest
+    }
+    catch {
+        Write-Host "[WARN] Cannot read documentation manifest; performing a full scan: $($_.Exception.Message)" -ForegroundColor Yellow
+        return [PSCustomObject]@{ Entries = @() }
+    }
+}
+
+function Get-ManifestEntryValue($Entry, [string]$PropertyName) {
+    if ($null -eq $Entry) { return $null }
+    $property = $Entry.PSObject.Properties[$PropertyName]
+    if ($null -eq $property) { return $null }
+    return $property.Value
+}
+
 function Invoke-SourceScan {
     $resolvedRoot = Resolve-ProjectRoot
-    $uprojectPath = Get-UProjectPath$resolvedRoot
+    $uprojectPath = Get-UProjectPath $resolvedRoot
     $projectTitle = [System.IO.Path]::GetFileNameWithoutExtension($uprojectPath)
 
     Write-Section 'Source scan configuration'
@@ -961,14 +1001,17 @@ function Invoke-SourceScan {
 
     if ($TargetPlugin) {
         Write-Host "Target plugin: $TargetPlugin" -ForegroundColor Cyan
-        $targetIsPath = Test-Path -LiteralPath $TargetPlugin$engineSearchPath = if ($targetIsPath) { "" } else { $EnginePath }
-        $descriptorIndex = New-PluginDescriptorIndex$resolvedRoot $engineSearchPath$resolvedPluginName = Resolve-TargetPluginRecord $TargetPlugin$descriptorIndex
+        $targetIsPath = Test-Path -LiteralPath $TargetPlugin
+        $engineSearchPath = if ($targetIsPath) { "" } else { $EnginePath }
+        $descriptorIndex = New-PluginDescriptorIndex $resolvedRoot $engineSearchPath
+        $resolvedPluginName = Resolve-TargetPluginRecord $TargetPlugin $descriptorIndex
         $enabledNames = @($resolvedPluginName)
     }
     else {
         Write-Host "Engine root  : $(if ($EnginePath) {$EnginePath } else { '(not set - engine plugins skipped)' })" -ForegroundColor Cyan
-        $explicitNames = @(Find-EnabledUProjectPlugins $uprojectPath)$descriptorIndex = New-PluginDescriptorIndex $resolvedRoot$EnginePath
-        $enabledNames = @(Resolve-EnabledPluginNames$explicitNames $descriptorIndex$ExcludePlugins)
+        $explicitNames = @(Find-EnabledUProjectPlugins $uprojectPath)
+        $descriptorIndex = New-PluginDescriptorIndex $resolvedRoot $EnginePath
+        $enabledNames = @(Resolve-EnabledPluginNames $explicitNames $descriptorIndex $ExcludePlugins)
         Write-Host "Explicit plugins : $($explicitNames.Count)" -ForegroundColor Cyan
     }
 
@@ -976,21 +1019,52 @@ function Invoke-SourceScan {
     if ($enabledNames.Count -gt 0) { Write-Host ('  ' + ($enabledNames -join ', ')) -ForegroundColor DarkGray }
 
     Write-Section 'Enabled plugin source roots'
-    $pluginRoots = @(Find-EnabledPluginSourceRoots$enabledNames $descriptorIndex$ExcludePlugins)
+    $pluginRoots = @(Find-EnabledPluginSourceRoots $enabledNames $descriptorIndex $ExcludePlugins)
+    $pluginReleases = @{}
+    foreach ($plugin in $pluginRoots) {
+        $releasePath = if (Test-Path -LiteralPath $plugin.DescriptorPath -PathType Leaf) {
+            $plugin.DescriptorPath
+        }
+        else {
+            $plugin.SourceRoot
+        }
+        $releaseItem = Get-Item -LiteralPath $releasePath
+        $version = ''
+        $versionName = ''
+        if ($plugin.DescriptorPath -and (Test-Path -LiteralPath $plugin.DescriptorPath -PathType Leaf)) {
+            try {
+                $pluginDescriptor = Get-Content -LiteralPath $plugin.DescriptorPath -Raw -Encoding UTF8 | ConvertFrom-Json
+                $version = [string]$pluginDescriptor.Version
+                $versionName = [string]$pluginDescriptor.VersionName
+            }
+            catch {
+                Write-Host "[WARN] Cannot read plugin version metadata: $($plugin.DescriptorPath)" -ForegroundColor Yellow
+            }
+        }
+        $pluginReleases[$plugin.PluginName] = [PSCustomObject]@{
+            PluginName = $plugin.PluginName
+            Version = $version
+            VersionName = $versionName
+            DescriptorPath = $plugin.DescriptorPath
+            TimestampSource = if (Test-Path -LiteralPath $plugin.DescriptorPath -PathType Leaf) { 'PluginDescriptorLastWriteTimeUtc' } else { 'PluginSourceRootLastWriteTimeUtc' }
+            PluginReleaseTimestampUtc = $releaseItem.LastWriteTimeUtc.ToString('o')
+        }
+    }
 
-    $headers = [System.Collections.Generic.List[PSCustomObject]]::new()$excludedSegments = @('Intermediate', 'Binaries', 'ThirdParty')
-    $projectSourceRoot = Join-Path$resolvedRoot 'Source'
+    $headers = [System.Collections.Generic.List[PSCustomObject]]::new()
+    $excludedSegments = @('Intermediate', 'Binaries', 'ThirdParty')
+    $projectSourceRoot = Join-Path $resolvedRoot 'Source'
 
-    if (-not $TargetPlugin -and (Test-Path -LiteralPath$projectSourceRoot -PathType Container)) {
+    if (-not $TargetPlugin -and (Test-Path -LiteralPath $projectSourceRoot -PathType Container)) {
         Get-ChildItem -LiteralPath $projectSourceRoot -Filter '*.h' -Recurse -File -ErrorAction SilentlyContinue |
         Where-Object {
             $_.Name -notmatch '\.generated\.h$' -and
             -not (Test-PathHasExcludedSegment $_.FullName $excludedSegments)
         } |
         ForEach-Object {
-            $relative = Get-RelativePathCompat $projectSourceRoot$_.FullName
-            $parts =$relative -split '[\\/]'
-            $moduleName = if ($parts.Count -gt 1) { $parts[0] } else {$projectTitle }
+            $relative = Get-RelativePathCompat $projectSourceRoot $_.FullName
+            $parts = $relative -split '[\\/]'
+            $moduleName = if ($parts.Count -gt 1) { $parts[0] } else { $projectTitle }
 
             $headers.Add([PSCustomObject]@{
                 HeaderPath = $_.FullName
@@ -1000,11 +1074,13 @@ function Invoke-SourceScan {
                 GroupTitle = $projectTitle
                 FlatRelOut = 'Project.md'
                 ModuleName = $moduleName
+                PluginName = ''
+                PluginReleaseTimestampUtc = ''
             })
         }
     }
 
-    foreach ($plugin in$pluginRoots) {
+    foreach ($plugin in $pluginRoots) {
         Get-ChildItem -LiteralPath $plugin.SourceRoot -Filter '*.h' -Recurse -File -ErrorAction SilentlyContinue |
         Where-Object {
             $_.Name -notmatch '\.generated\.h$' -and
@@ -1012,7 +1088,8 @@ function Invoke-SourceScan {
         } |
         ForEach-Object {
             $relative = Get-RelativePathCompat $plugin.SourceRoot $_.FullName
-            $parts = $relative -split '[\\/]'$moduleName = if ($parts.Count -gt 1) {$parts[0] } else { 'Root' }
+            $parts = $relative -split '[\\/]'
+            $moduleName = if ($parts.Count -gt 1) { $parts[0] } else { 'Root' }
 
             $headers.Add([PSCustomObject]@{
                 HeaderPath = $_.FullName
@@ -1022,6 +1099,8 @@ function Invoke-SourceScan {
                 GroupTitle = $plugin.PluginName
                 FlatRelOut = Join-Path 'Plugins' "$($plugin.PluginName).md"
                 ModuleName = $moduleName
+                PluginName = $plugin.PluginName
+                PluginReleaseTimestampUtc = $pluginReleases[$plugin.PluginName].PluginReleaseTimestampUtc
             })
         }
     }
@@ -1034,100 +1113,282 @@ function Invoke-SourceScan {
 
     if ($uniqueHeaders.Count -eq 0) {
         Write-Host '[WARN] No eligible headers found.' -ForegroundColor Yellow
-        return
     }
 
     if (-not $script:OutputDir) {
-        $script:OutputDir = Join-Path$resolvedRoot 'Documentation\generated-api\markdown\source'
+        $script:OutputDir = Join-Path $resolvedRoot 'Documentation\generated-api\markdown\source'
     }
     else {
-        $script:OutputDir = Get-NormalizedFullPath$script:OutputDir
+        $script:OutputDir = Get-NormalizedFullPath $script:OutputDir
     }
 
     Write-Section 'Header conversion'
     Write-Host "Headers    : $($uniqueHeaders.Count)" -ForegroundColor Cyan
     Write-Host "Output dir : $script:OutputDir" -ForegroundColor Cyan
 
+    $manifestPath = Join-Path $script:OutputDir 'manifest.json'
+    $existingManifest = Get-ExistingDocumentationManifest $manifestPath
+    $previousEntries = @{}
+    $scopeRoots = [System.Collections.Generic.List[string]]::new()
+    if (-not $TargetPlugin -and (Test-Path -LiteralPath $projectSourceRoot -PathType Container)) {
+        $scopeRoots.Add($projectSourceRoot)
+    }
+    foreach ($plugin in $pluginRoots) { $scopeRoots.Add($plugin.SourceRoot) }
+
+    $retainedEntries = [System.Collections.Generic.List[object]]::new()
+    foreach ($entry in @($existingManifest.Entries)) {
+        if (-not $entry.SourcePath) { continue }
+        $sourceKey = (Get-NormalizedFullPath $entry.SourcePath).ToLowerInvariant()
+        $inScope = $false
+        foreach ($scopeRoot in $scopeRoots) {
+            if (Test-PathWithinRoot $entry.SourcePath $scopeRoot) { $inScope = $true; break }
+        }
+        if ($inScope) { $previousEntries[$sourceKey] = $entry }
+        else { $retainedEntries.Add($entry) }
+    }
+
     $nameCounts = @{}
-    foreach ($record in$uniqueHeaders) {
+    foreach ($record in $uniqueHeaders) {
         $baseName = [System.IO.Path]::GetFileNameWithoutExtension($record.HeaderPath)
-        $key = "$($record.BucketDir)\vert{}\vert{}$baseName"
+        $key = "$($record.BucketDir)|$baseName"
         if (-not $nameCounts.ContainsKey($key)) { $nameCounts[$key] = 0 }
         $nameCounts[$key]++
     }
 
-    $converted = 0$skipped = 0
-    $failed = 0$flattenedGroups = @{}
+    $converted = 0
+    $skipped = 0
+    $failed = 0
+    $unchanged = 0
+    $updated = 0
+    $flattenedGroups = @{}
+    $scanList = [System.Collections.Generic.List[object]]::new()
+    $manifestEntries = [System.Collections.Generic.List[object]]::new()
+    foreach ($entry in $retainedEntries) { $manifestEntries.Add($entry) }
+    $currentSourcePaths = @{}
 
-    foreach ($record in$uniqueHeaders) {
+    foreach ($record in $uniqueHeaders) {
+        $sourcePath = Get-NormalizedFullPath $record.HeaderPath
+        $sourceKey = $sourcePath.ToLowerInvariant()
+        $currentSourcePaths[$sourceKey] = $true
+        $sourceInfo = Get-Item -LiteralPath $record.HeaderPath
+        $sourceTimestamp = $sourceInfo.LastWriteTimeUtc.ToString('o')
+        $sourceHash = (Get-FileHash -LiteralPath $record.HeaderPath -Algorithm SHA256).Hash
         $baseName = [System.IO.Path]::GetFileNameWithoutExtension($record.HeaderPath)
-        $key = "$($record.BucketDir)\vert{}\vert{}$baseName"
-        $entryStem =$baseName
+        $nameKey = "$($record.BucketDir)|$baseName"
+        $entryStem = $baseName
 
-        if ($nameCounts[$key] -gt 1) {$relativeSource = Get-RelativePathCompat $record.SourceRoot $record.HeaderPath
-            $sourceDirectory = Split-Path -Parent$relativeSource
-            $suffix = if ($sourceDirectory) { $sourceDirectory -replace '[\\/]+', '__' } else { 'Root' }$entryStem = "${baseName}__${suffix}"
+        if ($nameCounts[$nameKey] -gt 1) {
+            $relativeSource = Get-RelativePathCompat $record.SourceRoot $record.HeaderPath
+            $sourceDirectory = Split-Path -Parent $relativeSource
+            $suffix = if ($sourceDirectory) { $sourceDirectory -replace '[\\/]+', '__' } else { 'Root' }
+            $entryStem = "${baseName}__${suffix}"
         }
 
         $markdownName = "$entryStem.md"
-        $outputPath = Join-Path (Join-Path $script:OutputDir$record.BucketDir) $markdownName$relativeProjectPath = Get-RelativePathCompat $resolvedRoot$record.HeaderPath
+        $outputPath = Join-Path (Join-Path $script:OutputDir $record.BucketDir) $markdownName
+        $cachePath = Join-Path (Join-Path $script:OutputDir '.cache') (Join-Path $record.BucketDir $markdownName)
+        $flatOutputPath = Join-Path $script:OutputDir $record.FlatRelOut
+        $relativeProjectPath = Get-RelativePathCompat $resolvedRoot $record.HeaderPath
+        $previous = if ($previousEntries.ContainsKey($sourceKey)) { $previousEntries[$sourceKey] } else { $null }
+        $expectedArtifact = if ($NoFlatten) { $outputPath } else { $cachePath }
+        $pluginVersion = ''
+        $pluginVersionName = ''
+        if ($record.PluginName) {
+            $pluginVersion = $pluginReleases[$record.PluginName].Version
+            $pluginVersionName = $pluginReleases[$record.PluginName].VersionName
+        }
+        $sourceChanged = $null -eq $previous -or
+            $previous.SourceLastWriteTimeUtc -ne $sourceTimestamp -or
+            [long]$previous.SourceLength -ne [long]$sourceInfo.Length -or
+            (Get-ManifestEntryValue $previous 'SourceSha256') -ne $sourceHash
+        $releaseChanged = $null -ne $previous -and
+            ((Get-ManifestEntryValue $previous 'PluginReleaseTimestampUtc') -ne $record.PluginReleaseTimestampUtc -or
+                (Get-ManifestEntryValue $previous 'PluginVersion') -ne $pluginVersion -or
+                (Get-ManifestEntryValue $previous 'PluginVersionName') -ne $pluginVersionName)
+        $previousHasDocumentation = $null -ne $previous -and
+            [bool](Get-ManifestEntryValue $previous 'HasDocumentation')
+        $artifactMissing = -not (Test-Path -LiteralPath $expectedArtifact -PathType Leaf) -and
+            ($null -eq $previous -or $previousHasDocumentation)
+        $needsParse = $sourceChanged -or $releaseChanged -or $artifactMissing
+        $status = if ($null -eq $previous) { 'New' }
+            elseif ($sourceChanged -or $releaseChanged) { 'Updated' }
+            elseif ($artifactMissing) { 'Rebuilt' }
+            else { 'Unchanged' }
 
-        try {
-            if ($NoFlatten) {$success = Convert-SingleHeader $record.HeaderPath $outputPath $relativeProjectPath -WhatIfOnly:$DryRun
-                if ($success) { $converted++ } else {$skipped++ }
+        $scanList.Add([PSCustomObject]@{
+            Status = $status
+            Plugin = $record.PluginName
+            SourcePath = $sourcePath
+            SourceLastWriteTimeUtc = $sourceTimestamp
+            SourceSha256 = $sourceHash
+            PluginReleaseTimestampUtc = $record.PluginReleaseTimestampUtc
+        })
+
+        if (-not $NoFlatten) {
+            if (-not $flattenedGroups.ContainsKey($record.GroupKey)) {
+                $flattenedGroups[$record.GroupKey] = [PSCustomObject]@{
+                    GroupTitle = $record.GroupTitle
+                    OutputPath = $flatOutputPath
+                    Entries = [System.Collections.Generic.List[PSCustomObject]]::new()
+                    NeedsWrite = -not (Test-Path -LiteralPath $flatOutputPath -PathType Leaf)
+                }
             }
-            else {
-                $markdown = Build-HeaderMarkdownContent $record.HeaderPath $relativeProjectPath
-                if ($null -ne $markdown) {$converted++
-                    if (-not $flattenedGroups.ContainsKey($record.GroupKey)) {
-                        $flattenedGroups[$record.GroupKey] = [PSCustomObject]@{
-                            GroupTitle = $record.GroupTitle
-                            OutputPath = Join-Path $script:OutputDir$record.FlatRelOut
-                            Entries    = [System.Collections.Generic.List[PSCustomObject]]::new()
-                        }
-                    }
+            if ($needsParse) { $flattenedGroups[$record.GroupKey].NeedsWrite = $true }
+        }
 
-                    $flattenedGroups[$record.GroupKey].Entries.Add([PSCustomObject]@{
-                        EntryId  = "$($record.ModuleName)\$entryStem"
-                        Markdown = $markdown
-                    })
+        $markdown = $null
+        try {
+            if ($needsParse) {
+                $markdown = Build-HeaderMarkdownContent $record.HeaderPath $relativeProjectPath
+                if ($null -ne $markdown) {
+                    $converted++
+                    if (-not $DryRun) {
+                        $artifactPath = if ($NoFlatten) { $outputPath } else { $cachePath }
+                        $parent = Split-Path -Parent $artifactPath
+                        if ($parent -and -not (Test-Path -LiteralPath $parent)) {
+                            New-Item -ItemType Directory -Path $parent -Force | Out-Null
+                        }
+                        [System.IO.File]::WriteAllText($artifactPath, $markdown, [System.Text.UTF8Encoding]::new($false))
+                    }
+                }
+                else {
+                    $skipped++
+                    if (-not $DryRun -and (Test-Path -LiteralPath $expectedArtifact -PathType Leaf)) {
+                        Remove-Item -LiteralPath $expectedArtifact -Force
+                    }
+                }
+            }
+            elseif (-not $NoFlatten) {
+                if ($previous.HasDocumentation) {
+                    $markdown = Get-Content -LiteralPath $cachePath -Raw -Encoding UTF8
                 }
                 else {
                     $skipped++
                 }
+                $unchanged++
             }
+            else {
+                $unchanged++
+            }
+
+            if ($null -ne $markdown -and -not $NoFlatten) {
+                $flattenedGroups[$record.GroupKey].Entries.Add([PSCustomObject]@{
+                    EntryId = "$($record.ModuleName)\\$entryStem"
+                    Markdown = $markdown
+                })
+            }
+
+            $manifestEntries.Add([PSCustomObject]@{
+                SourcePath = $sourcePath
+                SourceLastWriteTimeUtc = $sourceTimestamp
+                SourceLength = [long]$sourceInfo.Length
+                SourceSha256 = $sourceHash
+                PluginName = $record.PluginName
+                PluginVersion = $pluginVersion
+                PluginVersionName = $pluginVersionName
+                PluginReleaseTimestampUtc = $record.PluginReleaseTimestampUtc
+                GroupKey = $record.GroupKey
+                GroupTitle = $record.GroupTitle
+                EntryId = "$($record.ModuleName)\\$entryStem"
+                OutputPath = Get-RelativePathCompat $script:OutputDir $outputPath
+                CachePath = Get-RelativePathCompat $script:OutputDir $cachePath
+                FlatOutputPath = Get-RelativePathCompat $script:OutputDir $flatOutputPath
+                HasDocumentation = ($null -ne $markdown -or (-not $needsParse -and $null -ne $previous -and $previous.HasDocumentation))
+            })
         }
         catch {
             Write-Host "  [ERROR] $($_.Exception.Message)" -ForegroundColor Red
             $failed++
+            if ($null -ne $previous) { $manifestEntries.Add($previous) }
         }
-        Write-Host ""
     }
 
-    if (-not $NoFlatten -and$flattenedGroups.Count -gt 0) {
-        Write-Section 'Flattened plugin output'
-        foreach ($groupKey in ($flattenedGroups.Keys \vert{} Sort-Object)) {$group = $flattenedGroups[$groupKey]
-            $flatPath =$group.OutputPath
-            $entryCount =$group.Entries.Count
+    foreach ($sourceKey in @($previousEntries.Keys)) {
+        if ($currentSourcePaths.ContainsKey($sourceKey)) { continue }
+        $removedEntry = $previousEntries[$sourceKey]
+        $scanList.Add([PSCustomObject]@{
+            Status = 'Removed'
+            Plugin = $removedEntry.PluginName
+            SourcePath = $removedEntry.SourcePath
+            SourceLastWriteTimeUtc = $removedEntry.SourceLastWriteTimeUtc
+            PluginReleaseTimestampUtc = $removedEntry.PluginReleaseTimestampUtc
+        })
+        if (-not $NoFlatten -and $removedEntry.GroupKey) {
+            if (-not $flattenedGroups.ContainsKey($removedEntry.GroupKey)) {
+                $oldFlatPath = Join-Path $script:OutputDir $removedEntry.FlatOutputPath
+                $flattenedGroups[$removedEntry.GroupKey] = [PSCustomObject]@{
+                    GroupTitle = $removedEntry.GroupTitle
+                    OutputPath = $oldFlatPath
+                    Entries = [System.Collections.Generic.List[PSCustomObject]]::new()
+                    NeedsWrite = $true
+                }
+            }
+            else { $flattenedGroups[$removedEntry.GroupKey].NeedsWrite = $true }
+        }
+        if (-not $DryRun) {
+            $stalePath = if ($NoFlatten) { Join-Path $script:OutputDir $removedEntry.OutputPath }
+                else { Join-Path $script:OutputDir $removedEntry.CachePath }
+            if ($stalePath -and (Test-PathWithinRoot $stalePath $script:OutputDir) -and (Test-Path -LiteralPath $stalePath -PathType Leaf)) {
+                Remove-Item -LiteralPath $stalePath -Force
+            }
+        }
+    }
 
-            if ($DryRun) {
-                Write-Host "  [DRY RUN] $($group.GroupTitle) ($entryCount entries) ->$flatPath" -ForegroundColor Yellow
+    if (-not $NoFlatten -and $flattenedGroups.Count -gt 0) {
+        Write-Section 'Flattened plugin output'
+        foreach ($groupKey in ($flattenedGroups.Keys | Sort-Object)) {
+            $group = $flattenedGroups[$groupKey]
+            if (-not $group.NeedsWrite) { continue }
+            $flatPath = $group.OutputPath
+            if ($group.Entries.Count -eq 0) {
+                if (-not $DryRun -and (Test-PathWithinRoot $flatPath $script:OutputDir) -and (Test-Path -LiteralPath $flatPath -PathType Leaf)) {
+                    Remove-Item -LiteralPath $flatPath -Force
+                    Write-Host "  Removed: $flatPath" -ForegroundColor Yellow
+                }
                 continue
             }
-
-            $parent = Split-Path -Parent$flatPath
-            if ($parent -and -not (Test-Path -LiteralPath$parent)) {
+            $entryCount = $group.Entries.Count
+            if ($DryRun) {
+                Write-Host "  [DRY RUN] $($group.GroupTitle) ($entryCount entries) -> $flatPath" -ForegroundColor Yellow
+                continue
+            }
+            $parent = Split-Path -Parent $flatPath
+            if ($parent -and -not (Test-Path -LiteralPath $parent)) {
                 New-Item -ItemType Directory -Path $parent -Force | Out-Null
             }
-
             $flatMarkdown = Generate-FlattenedMarkdown $group.GroupTitle $group.Entries.ToArray()
             [System.IO.File]::WriteAllText($flatPath, $flatMarkdown, [System.Text.UTF8Encoding]::new($false))
             Write-Host "  Written: $flatPath ($entryCount entries)" -ForegroundColor Green
         }
     }
 
+    if (-not $DryRun) {
+        $manifest = [PSCustomObject]@{
+            FormatVersion = 1
+            GeneratedAtUtc = [DateTime]::UtcNow.ToString('o')
+            ProjectRoot = $resolvedRoot
+            PluginReleaseTimestamps = @($pluginReleases.Values | Sort-Object PluginName)
+            ScanList = @($scanList.ToArray())
+            Entries = @($manifestEntries.ToArray() | Sort-Object SourcePath)
+        }
+        $manifestParent = Split-Path -Parent $manifestPath
+        if (-not (Test-Path -LiteralPath $manifestParent -PathType Container)) {
+            New-Item -ItemType Directory -Path $manifestParent -Force | Out-Null
+        }
+        $manifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
+        Write-Host "Manifest  : $manifestPath" -ForegroundColor Cyan
+    }
+
+    if ($scanList.Count -gt 0) {
+        Write-Section 'Incremental scan list'
+        $scanList | Sort-Object Status, SourcePath | ForEach-Object {
+            Write-Host ("  {0,-9} {1}" -f $_.Status, $_.SourcePath) -ForegroundColor $(if ($_.Status -eq 'Updated' -or $_.Status -eq 'New') { 'Green' } elseif ($_.Status -eq 'Removed') { 'Yellow' } else { 'DarkGray' })
+        }
+    }
+
     Write-Section 'Source scan summary'
     Write-Host "Converted : $converted" -ForegroundColor Green
+    Write-Host "Unchanged : $unchanged" -ForegroundColor Cyan
     Write-Host "Skipped   : $skipped" -ForegroundColor Yellow
     Write-Host "Failed    : $failed" -ForegroundColor $(if ($failed -gt 0) { 'Red' } else { 'Green' })
     if (-not $NoFlatten) {
@@ -1146,36 +1407,37 @@ function Convert-ToPythonRawString([string]$Value) {
 
 function Invoke-ContentScan {
     $resolvedRoot = Resolve-ProjectRoot
-    $uprojectPath = Get-UProjectPath$resolvedRoot
+    $uprojectPath = Get-UProjectPath $resolvedRoot
     if (-not $EnginePath) {
         throw 'Content scan requires -EnginePath.'
     }
-    $editorCommand = Join-Path$EnginePath 'Engine\Binaries\Win64\UnrealEditor-Cmd.exe'
+    $editorCommand = Join-Path $EnginePath 'Engine\Binaries\Win64\UnrealEditor-Cmd.exe'
 
     if (-not (Test-Path -LiteralPath $editorCommand -PathType Leaf)) {
         throw "UnrealEditor-Cmd.exe not found: $editorCommand"
     }
 
-    if (-not $script:ContentExporterScript) {$candidatePaths = @(
+    if (-not $script:ContentExporterScript) {
+        $candidatePaths = @(
             (Join-Path $resolvedRoot 'WeekendWarriorDevTools\tools\python\assets\export_blueprint_graph_docs.py'),
             (Join-Path $resolvedRoot 'tools\python\assets\export_blueprint_graph_docs.py')
         )
-        $script:ContentExporterScript = $candidatePaths \vert{} Where-Object { Test-Path -LiteralPath$_ -PathType Leaf } | Select-Object -First 1
+        $script:ContentExporterScript = $candidatePaths | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
     }
 
-    if (-not $script:ContentExporterScript -or -not (Test-Path -LiteralPath$script:ContentExporterScript -PathType Leaf)) {
+    if (-not $script:ContentExporterScript -or -not (Test-Path -LiteralPath $script:ContentExporterScript -PathType Leaf)) {
         throw 'Content exporter not found. Pass -ContentExporterScript explicitly.'
     }
 
     if (-not $script:ContentOutputDir) {
-        $script:ContentOutputDir = Join-Path$resolvedRoot 'Documentation\generated-api\markdown\content'
+        $script:ContentOutputDir = Join-Path $resolvedRoot 'Documentation\generated-api\markdown\content'
     }
 
-    $exporterDirectory = Split-Path -Parent$script:ContentExporterScript
-    $escapedExporterDirectory = Convert-ToPythonRawString$exporterDirectory
-    $escapedOutputDirectory = Convert-ToPythonRawString$script:ContentOutputDir
-    $pythonExclusions = '[' + (($ExcludePlugins | ForEach-Object { "r'$(Convert-ToPythonRawString$_)'" }) -join ', ') + ']'
-    $bootstrapPath = Join-Path$env:TEMP 'wws_export_content_docs_bootstrap.py'
+    $exporterDirectory = Split-Path -Parent $script:ContentExporterScript
+    $escapedExporterDirectory = Convert-ToPythonRawString $exporterDirectory
+    $escapedOutputDirectory = Convert-ToPythonRawString $script:ContentOutputDir
+    $pythonExclusions = '[' + (($ExcludePlugins | ForEach-Object { "r'$(Convert-ToPythonRawString $_)'" }) -join ', ') + ']'
+    $bootstrapPath = Join-Path $env:TEMP 'wws_export_content_docs_bootstrap.py'
 
     $bootstrap = @(
         'import sys',
@@ -1185,7 +1447,7 @@ function Invoke-ContentScan {
     )
 
     if (-not $DryRun) {
-        Set-Content -LiteralPath $bootstrapPath -Value$bootstrap -Encoding UTF8
+        Set-Content -LiteralPath $bootstrapPath -Value $bootstrap -Encoding UTF8
     }
 
     $arguments = @(
@@ -1208,7 +1470,7 @@ function Invoke-ContentScan {
     if ($DryRun) {
         Write-Host ''
         Write-Host '[DRY RUN] Bootstrap content:' -ForegroundColor Yellow
-        $bootstrap \vert{} ForEach-Object { Write-Host "  $_" -ForegroundColor DarkYellow }
+        $bootstrap | ForEach-Object { Write-Host "  $_" -ForegroundColor DarkYellow }
         Write-Host ''
         Write-Host '[DRY RUN] Command:' -ForegroundColor Yellow
         Write-Host "`"$editorCommand`" $($arguments -join ' ')" -ForegroundColor Yellow
@@ -1228,12 +1490,14 @@ function Invoke-ContentScan {
 # -----------------------------------------------------------------------------
 
 try {
-    $runSourceScan = $ScanAll -or (-not [string]::IsNullOrWhiteSpace($TargetPlugin))
+    $runSourceScan = $ScanAll -or
+        (-not [string]::IsNullOrWhiteSpace($TargetPlugin)) -or
+        (-not $HeaderFile -and -not $ScanContent)
 
     if ($runSourceScan) { Invoke-SourceScan }
     if ($ScanContent) { Invoke-ContentScan }
 
-    if (-not $runSourceScan -and -not$ScanContent) {
+    if (-not $runSourceScan -and -not $ScanContent) {
         if (-not $HeaderFile) {
             throw 'Provide a .h file, or use -TargetPlugin, -ScanAll, and/or -ScanContent.'
         }
@@ -1246,7 +1510,7 @@ try {
             throw 'Single-file mode requires a .h file.'
         }
 
-        $HeaderFile = (Resolve-Path -LiteralPath$HeaderFile).Path
+        $HeaderFile = (Resolve-Path -LiteralPath $HeaderFile).Path
         if (-not $Output) {
             $Output = [System.IO.Path]::ChangeExtension($HeaderFile, '.md')
         }
