@@ -96,7 +96,7 @@ param(
     [string]$OutputDir = "",
     [string]$ContentOutputDir = "",
     [string[]]$ExcludePlugins = @(),
-    [string]$EnginePath = "A:\GE\UE_5.8",
+    [string]$EnginePath = "",
     [string]$ContentExporterScript = "",
     [switch]$DryRun
 )
