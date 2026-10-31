@@ -30,10 +30,10 @@ Components tab, via two different routes:
     and walk parent/child attachment via handles.
 
 Run from the Unreal Editor Python console:
-    import sys
-    sys.path.insert(0, r"C:\\MyProject\\WeekendWarriorDevTools\\tools\\python\\assets")
-    import export_blueprint_graph_docs as ebgd
-    ebgd.export_all_content_docs()
+import sys
+sys.path.insert(0, r"A:/Projects/AlterEgo/WeekendWarriorDevTools/tools/python/assets")
+import export_blueprint_graph_docs as ebgd
+ebgd.export_all_content_docs()
 
 Output layout (default), type-first:
     Documentation/generated-api/markdown/content/Blueprint/Project/<Name>.md
