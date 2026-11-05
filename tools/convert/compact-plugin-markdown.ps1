@@ -6,32 +6,30 @@
     few size-capped) sibling Markdown file(s).
 
 .DESCRIPTION
-    Folders found two levels beneath -ParentFolder are each recursively
-    scanned for .md files. Every Markdown file belonging to one of those
-    folders is merged into sibling file(s) named after the folder itself.
+    Each direct child folder of -ParentFolder is recursively scanned for .md
+    files. Every Markdown file belonging to one of those folders is merged into
+    file(s) named after that folder, written directly into -ParentFolder.
 
-    Pointing -ParentFolder at markdown\generated-api targets
-    markdown\generated-api\*\* (e.g. markdown\generated-api\source\PoseSearch),
-    so each plugin/module folder is compacted on its own rather than every
-    folder under -ParentFolder being flattened into one another.
+    Pointing -ParentFolder at markdown\source\Plugins targets
+    markdown\source\Plugins\* (e.g. markdown\source\Plugins\PoseSearch):
 
-        source\Plugins\PoseSearch\Runtime\PoseSearchLibrary.md   ->   source\Plugins\PoseSearch.md
+        Plugins\PoseSearch\Runtime\PoseSearchLibrary.md   ->   Plugins\PoseSearch.md
 
     If the combined word count exceeds -MaxWordsPerFile, the output is split:
 
-        source\Plugins\PoseSearch_1.md
-        source\Plugins\PoseSearch_2.md
+        Plugins\PoseSearch_1.md
+        Plugins\PoseSearch_2.md
 
     The source folder is deleted only after every output file has been written
     successfully. If a write fails, any partial outputs are removed and the
     source folder is left untouched.
 
     Nothing about this script is plugin-specific. -ParentFolder simply means
-    "the folder two levels above the folders that get compacted", so it works
-    equally on markdown\source\Plugins\* and markdown\content\Animation\*.
+    "the folder directly above the folders that get compacted", so it works
+    equally on markdown\source\Plugins and markdown\content\Animation.
 
 .PARAMETER ParentFolder
-    The folder containing the documentation directories to compact.
+    The folder whose direct child folders get compacted.
     Aliases: -PluginsRoot, -RootFolder
 
 .PARAMETER MaxWordsPerFile
@@ -46,7 +44,7 @@
     Reports what would happen without writing or deleting anything.
 
 .EXAMPLE
-    .\compact-plugin-markdown.ps1 -ParentFolder "Documentation\generated-api\markdown" -DryRun
+    .\compact-plugin-markdown.ps1 -ParentFolder "Documentation\generated-api\markdown\source\Plugins" -DryRun
 
 .EXAMPLE
     .\compact-plugin-markdown.ps1 -ParentFolder "Documentation\generated-api\markdown\content\Animation"
@@ -347,22 +345,16 @@ if ($FolderName) {
     $targetFolders = @(Get-Item -LiteralPath $selectedPath)
 }
 else {
-    # Compaction units live two levels beneath -ParentFolder (ParentFolder\*\*),
-    # e.g. markdown\source\PoseSearch, not markdown\source itself. Going only
-    # one level deep would flatten every module under "source" into one file.
-    $firstLevel = @(
-        Get-ChildItem -LiteralPath $ParentFolder -Directory
-    )
-
+    # Compaction units are the direct children of -ParentFolder, so each
+    # output lands in -ParentFolder itself.
     $targetFolders = @(
-        $firstLevel |
-        ForEach-Object { Get-ChildItem -LiteralPath $_.FullName -Directory } |
+        Get-ChildItem -LiteralPath $ParentFolder -Directory |
         Sort-Object FullName
     )
 }
 
 if ($targetFolders.Count -eq 0) {
-    Write-Host "[WARN] No folders found two levels under $ParentFolder" -ForegroundColor Yellow
+    Write-Host "[WARN] No folders found under $ParentFolder" -ForegroundColor Yellow
     return
 }
 
