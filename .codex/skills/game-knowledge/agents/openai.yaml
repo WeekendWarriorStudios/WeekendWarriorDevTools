@@ -1,0 +1,4 @@
+interface:
+  display_name: "Game Knowledge"
+  short_description: "Ground game design and Unreal production decisions"
+  default_prompt: "Use the game knowledge library to analyze this design or Unreal Engine problem and produce evidence-aware, actionable guidance."
