@@ -42,8 +42,8 @@
     (e.g., "A:\Projects\AlterEgo\Plugins\PCGExtendedToolkit") to scan exclusively.
 
 .PARAMETER NoFlatten
-    When set, writes individual .md files per C++ header instead of flattening each plugin
-    into a single <PluginName>.md file.
+    When set, writes individual .md files per C++ header (and, with -ScanContent, per content
+    asset) instead of flattening each plugin into a single <PluginName>.md file.
 
 .PARAMETER ScanContent
     Run the Unreal content documentation exporter.
@@ -1541,7 +1541,7 @@ function Invoke-ContentScan {
         'import sys',
         "sys.path.insert(0, r'$escapedExporterDirectory')",
         'import export_blueprint_graph_docs as exporter',
-        "exporter.export_all_content_docs(output_dir=r'$escapedOutputDirectory', exclude_plugins=$pythonExclusions)"
+        "exporter.export_all_content_docs(output_dir=r'$escapedOutputDirectory', exclude_plugins=$pythonExclusions, flatten=$(if ($NoFlatten) { 'False' } else { 'True' }))"
     )
 
     if (-not $DryRun) {

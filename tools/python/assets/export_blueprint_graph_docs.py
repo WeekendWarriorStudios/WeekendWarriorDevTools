@@ -35,7 +35,16 @@ sys.path.insert(0, r"A:/Projects/AlterEgo/WeekendWarriorDevTools/tools/python/as
 import export_blueprint_graph_docs as ebgd
 ebgd.export_all_content_docs()
 
-Output layout (default), type-first:
+Output layout (default, flatten=True), one file per plugin - same shape as
+convert-cpp-to-markdown.ps1's source docs:
+    Documentation/generated-api/markdown/content/Project.md
+    Documentation/generated-api/markdown/content/Plugins/Custom/<Plugin>.md
+    Documentation/generated-api/markdown/content/Plugins/Engine/<Plugin>.md
+    Documentation/generated-api/markdown/content/ContentPacks/<Folder>.md
+Each asset is a '## <Type>/<path under mount>/<AssetName>' section (e.g.
+'## Blueprint/Blueprints/BP_CustomizationManager'), listed in a Contents index at the top.
+
+Output layout with flatten=False, type-first, one file per asset:
     Documentation/generated-api/markdown/content/Blueprint/Project/<Name>.md
     Documentation/generated-api/markdown/content/Blueprint/<PluginRoot>/<Name>.md
     Documentation/generated-api/markdown/content/Graph/Project/<Name>.md
@@ -1101,24 +1110,128 @@ def _discover_on_disk_plugin_content_roots(exclude_plugins=None):
     including it here unconditionally is harmless.
     """
     exclude_plugins = {name.lower() for name in (exclude_plugins or [])}
-    plugins_dir = os.path.join(_project_root(), "Plugins")
     roots = set()
 
-    for dirpath, _dirnames, filenames in os.walk(plugins_dir):
-        if not os.path.isdir(os.path.join(dirpath, "Content")):
+    for plugin_name, plugin_dir in _iter_project_uplugins():
+        if not os.path.isdir(os.path.join(plugin_dir, "Content")):
             continue
-
-        for filename in filenames:
-            if not filename.lower().endswith(".uplugin"):
-                continue
-
-            plugin_name = os.path.splitext(filename)[0]
-            if plugin_name.lower() in exclude_plugins:
-                continue
-
-            roots.add(f"/{plugin_name}")
+        if plugin_name.lower() in exclude_plugins:
+            continue
+        roots.add(f"/{plugin_name}")
 
     return roots
+
+
+def _iter_project_uplugins():
+    """Yield (plugin_name, plugin_dir) for every *.uplugin anywhere under this project's Plugins/
+    folder (recursively - see _discover_on_disk_plugin_content_roots for why)."""
+    plugins_dir = os.path.join(_project_root(), "Plugins")
+    for dirpath, _dirnames, filenames in os.walk(plugins_dir):
+        for filename in filenames:
+            if filename.lower().endswith(".uplugin"):
+                yield os.path.splitext(filename)[0], dirpath
+
+
+def _project_plugin_names():
+    """Lower-cased names of every plugin that lives in this project's Plugins/ folder. Any other
+    mounted plugin root is an engine (or marketplace-installed engine) plugin."""
+    return {name.lower() for name, _dir in _iter_project_uplugins()}
+
+
+# ---------------------------------------------------------------------------
+# Flattened (one file per plugin) output - mirrors convert-cpp-to-markdown.ps1
+# ---------------------------------------------------------------------------
+
+def _flat_group(package_name, project_plugin_names):
+    """Return (group_key, group_title, output_rel_parts, segments_to_skip) for a package path.
+
+    Same layout as convert-cpp-to-markdown.ps1's source docs:
+    - '/Game/<ProjectName>/...' and assets directly in '/Game' -> Project.md
+    - '/<Plugin>/...' for a plugin under the project's Plugins/ -> Plugins/Custom/<Plugin>.md
+    - '/<Plugin>/...' for any other mounted plugin              -> Plugins/Engine/<Plugin>.md
+    - '/Game/<OtherFolder>/...' (content packs dropped straight into Content/ rather than
+      mounted as plugins, e.g. FluidNinjaLive, UltraDynamicSky) -> ContentPacks/<OtherFolder>.md
+    """
+    parts = [p for p in package_name.strip("/").split("/") if p]
+
+    if not parts or parts[0] == "Game":
+        if len(parts) <= 2:
+            return "Project", _project_content_folder_name(), ["Project.md"], 1
+        if parts[1] == _project_content_folder_name():
+            return "Project", parts[1], ["Project.md"], 2
+        return f"Pack::{parts[1]}", parts[1], ["ContentPacks", f"{parts[1]}.md"], 2
+
+    plugin_name = parts[0]
+    category = "Custom" if plugin_name.lower() in project_plugin_names else "Engine"
+    return f"Plugin::{plugin_name}", plugin_name, ["Plugins", category, f"{plugin_name}.md"], 1
+
+
+_FENCE_RE = re.compile(r"^\s*(```|~~~)")
+_HEADING_RE = re.compile(r"^(#{1,5})(\s)")
+
+
+def _nest_entry_markdown(markdown):
+    """Fit a standalone per-asset document under a '## <EntryId>' heading: drop its leading
+    '# <AssetName>' title (the entry heading replaces it) and push every other heading down one
+    level so the flattened file keeps a single coherent outline. Fenced code is left untouched."""
+    lines = markdown.strip("\r\n").splitlines()
+    if lines and lines[0].startswith("# "):
+        lines = lines[1:]
+        while lines and not lines[0].strip():
+            lines = lines[1:]
+
+    in_fence = False
+    nested = []
+    for line in lines:
+        if _FENCE_RE.match(line):
+            in_fence = not in_fence
+        elif not in_fence:
+            line = _HEADING_RE.sub(lambda m: "#" + m.group(1) + m.group(2), line, count=1)
+        nested.append(line)
+    return "\n".join(nested)
+
+
+def _generate_flattened_markdown(group_title, entries):
+    """Same shape as Generate-FlattenedMarkdown in convert-cpp-to-markdown.ps1."""
+    entries = sorted(entries, key=lambda entry: entry[0].lower())
+    entry_word = "entry" if len(entries) == 1 else "entries"
+
+    out = [
+        f"# {group_title}",
+        "",
+        f"_Compacted from {len(entries)} Markdown {entry_word}._",
+        "",
+        "## Contents",
+        "",
+    ]
+    out.extend(f"- {entry_id}" for entry_id, _markdown in entries)
+    out.append("")
+
+    for entry_id, markdown in entries:
+        out.extend(["---", "", f"## {entry_id}", "", _nest_entry_markdown(markdown), ""])
+
+    return "\n".join(out) + "\n"
+
+
+def _remove_stale_flat_files(output_dir, written_paths, exclude_plugins):
+    """After a full scan, delete flattened files for plugins/packs that no longer produced any
+    assets (plugin removed or emptied). Files for explicitly excluded plugins are kept."""
+    exclude_plugins = {name.lower() for name in (exclude_plugins or [])}
+    written = {os.path.normcase(os.path.abspath(p)) for p in written_paths}
+    candidates = [os.path.join(output_dir, "Project.md")]
+    for sub in ("Plugins", "ContentPacks"):
+        for dirpath, _dirnames, filenames in os.walk(os.path.join(output_dir, sub)):
+            candidates.extend(os.path.join(dirpath, f) for f in filenames if f.lower().endswith(".md"))
+
+    for path in candidates:
+        if not os.path.isfile(path):
+            continue
+        if os.path.normcase(os.path.abspath(path)) in written:
+            continue
+        if os.path.splitext(os.path.basename(path))[0].lower() in exclude_plugins:
+            continue
+        os.remove(path)
+        unreal.log(f"[ContentDocs] Removed stale {path}")
 
 
 def _project_content_folder_name():
@@ -1185,10 +1298,18 @@ def _output_path_parts(type_bucket, package_name, asset_name, duplicate_counts):
     return [type_bucket] + bucket_segments, filename
 
 
-def export_all_content_docs(output_dir=None, scan_roots=None, exclude_plugins=None):
+def export_all_content_docs(output_dir=None, scan_roots=None, exclude_plugins=None, flatten=True):
     """
     Find every authored Blueprint, PCG/Voxel graph, and Data Asset under scan_roots and export
-    it to markdown under Documentation/generated-api/markdown/content/<type>/<Project|Plugin>/<name>.md.
+    it to markdown under Documentation/generated-api/markdown/content/.
+
+    flatten: True (default) writes one file per plugin, matching convert-cpp-to-markdown.ps1:
+                 content/Project.md
+                 content/Plugins/Custom/<Plugin>.md
+                 content/Plugins/Engine/<Plugin>.md
+                 content/ContentPacks/<Folder>.md
+             Each asset becomes a '## <Type>/<path>/<AssetName>' entry. False keeps the per-asset
+             layout content/<type>/<Project|Plugin>/<name>.md.
 
     scan_roots: list of content mount points to scan (e.g. ["/Game", "/Combat"]).
                 Defaults to None, which scans every mounted project-content and active plugin
@@ -1212,6 +1333,7 @@ def export_all_content_docs(output_dir=None, scan_roots=None, exclude_plugins=No
     asset_registry.search_all_assets(True)
     asset_registry.wait_for_completion()
 
+    full_scan = scan_roots is None
     if scan_roots is None:
         scan_roots = sorted(
             set(_discover_mounted_scan_roots(asset_registry, exclude_plugins))
@@ -1272,6 +1394,9 @@ def export_all_content_docs(output_dir=None, scan_roots=None, exclude_plugins=No
 
     written = 0
     skipped = 0
+    project_plugin_names = _project_plugin_names() if flatten else set()
+    # group_key -> {"title": str, "path": str, "entries": [(entry_id, markdown), ...]}
+    flat_groups = {}
 
     for asset_data, asset_kind in assets:
         package_name = str(asset_data.package_name)
@@ -1315,6 +1440,18 @@ def export_all_content_docs(output_dir=None, scan_roots=None, exclude_plugins=No
             markdown = _generate_data_asset_markdown(asset_name, package_name, obj)
 
         type_bucket = _TYPE_BUCKET_BY_KIND[asset_kind]
+
+        if flatten:
+            group_key, group_title, rel_parts, segments_to_skip = _flat_group(package_name, project_plugin_names)
+            package_parts = [p for p in package_name.strip("/").split("/") if p]
+            entry_id = "/".join([type_bucket] + package_parts[segments_to_skip:-1] + [asset_name])
+            group = flat_groups.setdefault(
+                group_key,
+                {"title": group_title, "path": os.path.join(output_dir, *rel_parts), "entries": []},
+            )
+            group["entries"].append((entry_id, markdown))
+            continue
+
         dir_segments, filename = _output_path_parts(type_bucket, package_name, asset_name, duplicate_counts)
         target_dir = os.path.join(output_dir, *dir_segments)
         os.makedirs(target_dir, exist_ok=True)
@@ -1325,6 +1462,22 @@ def export_all_content_docs(output_dir=None, scan_roots=None, exclude_plugins=No
 
         unreal.log(f"[ContentDocs] Wrote {out_path}")
         written += 1
+
+    if flatten:
+        written_paths = []
+        for group_key in sorted(flat_groups.keys()):
+            group = flat_groups[group_key]
+            os.makedirs(os.path.dirname(group["path"]), exist_ok=True)
+            with open(group["path"], "w", encoding="utf-8") as f:
+                f.write(_generate_flattened_markdown(group["title"], group["entries"]))
+            written_paths.append(group["path"])
+            written += len(group["entries"])
+            unreal.log(f"[ContentDocs] Wrote {group['path']} ({len(group['entries'])} asset(s))")
+
+        if full_scan:
+            _remove_stale_flat_files(output_dir, written_paths, exclude_plugins)
+
+        unreal.log(f"[ContentDocs] Flattened: {len(flat_groups)} file(s)")
 
     unreal.log(f"[ContentDocs] Done. Written: {written}  Skipped: {skipped}")
     return written, skipped
