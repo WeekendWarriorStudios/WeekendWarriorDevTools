@@ -735,13 +735,29 @@ function Generate-FlattenedMarkdown(
 # Plugin discovery
 # -----------------------------------------------------------------------------
 
+# Unreal's JSON reader tolerates trailing commas (and descriptors sometimes carry
+# // or /* */ comments), but Windows PowerShell 5.1's ConvertFrom-Json rejects
+# both. Several stock engine .uplugin files (ImgMedia, SequencerScripting,
+# ModelViewViewModel, ...) have trailing commas, so strip these first while
+# leaving string literals untouched.
+$script:JsonCommentPattern = [regex]'("(?:\\.|[^"\\])*")|//[^\r\n]*|/\*[\s\S]*?\*/'
+$script:JsonTrailingCommaPattern = [regex]'("(?:\\.|[^"\\])*")|,(?=\s*[\]}])'
+
+function Read-UnrealJsonFile([string]$Path) {
+    $text = Get-Content -LiteralPath $Path -Raw -Encoding UTF8
+    $keepStrings = [System.Text.RegularExpressions.MatchEvaluator] {
+        param($m)
+        if ($m.Groups[1].Success) { return $m.Groups[1].Value }
+        return ''
+    }
+    $text = $script:JsonCommentPattern.Replace($text, $keepStrings)
+    $text = $script:JsonTrailingCommaPattern.Replace($text, $keepStrings)
+    return $text | ConvertFrom-Json
+}
+
 function Find-EnabledUProjectPlugins([string]$UProjectPath) {
     try {
-        $json = Get-Content `
-            -LiteralPath $UProjectPath `
-            -Raw `
-            -Encoding UTF8 |
-            ConvertFrom-Json
+        $json = Read-UnrealJsonFile $UProjectPath
     }
     catch {
         throw "Could not parse project descriptor '$UProjectPath': $($_.Exception.Message)"
@@ -777,14 +793,10 @@ function Find-EnabledUProjectPlugins([string]$UProjectPath) {
 
 function Get-UPluginDependencies([string]$UPluginPath) {
     try {
-        $json = Get-Content `
-            -LiteralPath $UPluginPath `
-            -Raw `
-            -Encoding UTF8 |
-            ConvertFrom-Json
+        $json = Read-UnrealJsonFile $UPluginPath
     }
     catch {
-        Write-Host "[WARN] Cannot parse plugin descriptor: $UPluginPath" -ForegroundColor Yellow
+        Write-Host "[WARN] Cannot parse plugin descriptor: $UPluginPath ($($_.Exception.Message.Split([char]10)[0]))" -ForegroundColor Yellow
         return @()
     }
 
@@ -945,7 +957,12 @@ function Find-EnabledPluginSourceRoots([string[]]$EnabledNames,$DescriptorIndex,
 
         $record = $DescriptorIndex[$pluginName]
         if (-not (Test-Path -LiteralPath $record.SourceRoot -PathType Container)) {
-            Write-Host "  [NO SOURCE] $pluginName -> $($record.DescriptorPath)" -ForegroundColor Yellow
+            if (Test-Path -LiteralPath (Join-Path $record.PluginRoot 'Content') -PathType Container) {
+                Write-Host "  [CONTENT ONLY] $pluginName -> no C++ Source; its Blueprints/assets are documented by -ScanContent" -ForegroundColor DarkCyan
+            }
+            else {
+                Write-Host "  [NO SOURCE] $pluginName -> $($record.DescriptorPath)" -ForegroundColor Yellow
+            }
             continue
         }
 
@@ -1059,7 +1076,7 @@ function Invoke-SourceScan {
         $versionName = ''
         if ($plugin.DescriptorPath -and (Test-Path -LiteralPath $plugin.DescriptorPath -PathType Leaf)) {
             try {
-                $pluginDescriptor = Get-Content -LiteralPath $plugin.DescriptorPath -Raw -Encoding UTF8 | ConvertFrom-Json
+                $pluginDescriptor = Read-UnrealJsonFile $plugin.DescriptorPath
                 $version = [string]$pluginDescriptor.Version
                 $versionName = [string]$pluginDescriptor.VersionName
             }
